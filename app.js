@@ -2,7 +2,7 @@
 "use strict";
 window.RACES = window.RACES || [];
 window.registerRace = function(r){ window.RACES.push(r); };
-var VERSION="2.2";
+var VERSION="2.3";
 var typeName={suave:"Suave",medio:"Rodaje",fuerte:"Fuerte",carga:"Carga",carrera:"Carrera"};
 var MODE={hold:["#ecb63f","CONTEN"],steady:["#6f8fae","RITMO"],hike:["#ff4a30","ANDAR"],send:["#4fa76e","SUELTA"]};
 var MESES=["ene","feb","mar","abr","may","jun","jul","ago","sept","oct","nov","dic"];
@@ -122,43 +122,73 @@ function initScrubber(race){var wrapEl=document.getElementById('scrub');if(!wrap
   var j=(race.jumps||[]);update(j[1]?j[1][1]:0);}
 
 /* ---------- nav ---------- */
-var HOME_ROUTES=['#/','#/progreso','#/ajustes'];
-function homeNav(active){var it=[['inicio',I.home,'Inicio','#/'],['progreso',I.chart,'Progreso','#/progreso'],['ajustes',I.cog,'Ajustes','#/ajustes']];
-  return '<nav class="bottomnav" id="nav"><span class="nav-ind"></span>'+it.map(function(x){return '<button class="navitem'+(active===x[0]?' active':'')+'" data-go="'+x[3]+'"><span class="ni-ic">'+x[1]+'</span><span class="ni-lb">'+x[2]+'</span></button>';}).join('')+'</nav>';}
-function navGeom(){var nav=document.getElementById('nav');if(!nav)return null;var ind=nav.querySelector('.nav-ind');var els=[].slice.call(nav.querySelectorAll('.navitem'));if(!ind||!els.length)return null;
+/* ================= BARRA INFERIOR PERSISTENTE ================= */
+/* Vive fuera de #app: al repintar la pantalla NO se destruye, solo se
+   desliza el indicador. Ademas se puede arrastrar el dedo por encima. */
+var NAV={sig:null,tabs:[],onSelect:null,active:null};
+var HOME_TABS=[{key:'inicio',icon:I.home,label:'Inicio',route:'#/'},{key:'progreso',icon:I.chart,label:'Progreso',route:'#/progreso'},{key:'ajustes',icon:I.cog,label:'Ajustes',route:'#/ajustes'}];
+function navHost(){var h=document.getElementById('navhost');if(!h){h=document.createElement('div');h.id='navhost';document.body.appendChild(h);}return h;}
+function navEl(){return document.getElementById('nav');}
+function navGeom(){var nav=navEl();if(!nav)return null;var ind=nav.querySelector('.nav-ind');var els=[].slice.call(nav.querySelectorAll('.navitem'));if(!ind||!els.length)return null;
   var nr=nav.getBoundingClientRect();var boxes=els.map(function(e){var r=e.getBoundingClientRect();return {x:r.left-nr.left,w:r.width};});
-  if(!boxes[0].w)return null;return {nav:nav,ind:ind,els:els,boxes:boxes};}
-/* idx puede ser fraccionario: el indicador se desliza entre pestanas siguiendo el dedo */
+  if(!boxes[0].w)return null;return {nav:nav,ind:ind,els:els,boxes:boxes,rect:nr};}
 function indicatorAt(idx){var G=navGeom();if(!G)return;var n=G.boxes.length-1;
   idx=Math.max(0,Math.min(n,idx));var i0=Math.floor(idx),i1=Math.min(n,i0+1),t=idx-i0;
-  var a=G.boxes[i0],b=G.boxes[i1];
-  var x=a.x+(b.x-a.x)*t,wd=a.w+(b.w-a.w)*t;
+  var a=G.boxes[i0],b=G.boxes[i1];var x=a.x+(b.x-a.x)*t,wd=a.w+(b.w-a.w)*t;
   G.ind.style.width=(wd-16)+'px';G.ind.style.transform='translateX('+(x+8)+'px)';G.ind.style.opacity='1';
   var near=Math.round(idx);
   G.els.forEach(function(el,i){var d=Math.max(0,1-Math.abs(i-idx));var ic=el.querySelector('.ni-ic');
     if(ic)ic.style.transform='translateY('+(-2*d).toFixed(2)+'px) scale('+(1+0.12*d).toFixed(3)+')';
     el.classList.toggle('active',i===near);});}
-function activeIndex(){var G=navGeom();if(!G)return 0;for(var i=0;i<G.els.length;i++)if(G.els[i].classList.contains('active'))return i;return 0;}
-function placeIndicator(){var G=navGeom();if(!G)return;G.els.forEach(function(e){var ic=e.querySelector('.ni-ic');if(ic)ic.style.transform='';});indicatorAt(activeIndex());}
+function navIndexOf(key){for(var i=0;i<NAV.tabs.length;i++)if(NAV.tabs[i].key===key)return i;return 0;}
+function navSetActive(key){if(key)NAV.active=key;var G=navGeom();if(!G)return;indicatorAt(navIndexOf(NAV.active));}
+function placeIndicator(){navSetActive(NAV.active);}
+function navDot(key,on){var nav=navEl();if(!nav)return;var b=nav.querySelector('.navitem[data-k="'+key+'"] .ni-dot');if(b)b.classList.toggle('on',!!on);}
+function mountNav(sig,tabs,onSelect,active){var host=navHost();NAV.tabs=tabs;NAV.onSelect=onSelect;
+  if(host.dataset.sig!==sig){host.dataset.sig=sig;
+    host.innerHTML='<nav class="bottomnav" id="nav"><span class="nav-ind"></span>'+tabs.map(function(t){return '<button class="navitem" data-k="'+t.key+'"><span class="ni-ic">'+t.icon+'<i class="ni-dot"></i></span><span class="ni-lb">'+t.label+'</span></button>';}).join('')+'</nav>';
+    attachNavDrag();}
+  NAV.active=active;navSetActive(active);
+  /* Reajustes por si el layout aun no estaba listo. Sin argumento: recolocan
+     SIEMPRE la pestana activa actual, nunca una antigua (evita el salto). */
+  if(window.requestAnimationFrame)requestAnimationFrame(function(){navSetActive();});
+  setTimeout(function(){navSetActive();},80);
+  setTimeout(function(){navSetActive();},260);}
+function attachNavDrag(){var nav=navEl();if(!nav)return;var dragging=false,last=-1;
+  function idxFromX(cx){var G=navGeom();if(!G)return navIndexOf(NAV.active);
+    var x=cx-G.rect.left;var c=G.boxes.map(function(b){return b.x+b.w/2;});
+    if(x<=c[0])return 0;if(x>=c[c.length-1])return c.length-1;
+    for(var i=0;i<c.length-1;i++){if(x<=c[i+1])return i+(x-c[i])/(c[i+1]-c[i]);}
+    return c.length-1;}
+  function move(cx){var idx=idxFromX(cx);indicatorAt(idx);var n=Math.round(idx);if(n!==last){last=n;buzz();}}
+  function start(cx){dragging=true;last=navIndexOf(NAV.active);nav.classList.add('dragging');move(cx);}
+  function end(){if(!dragging)return;dragging=false;nav.classList.remove('dragging');
+    var i=Math.max(0,Math.min(NAV.tabs.length-1,last));var key=NAV.tabs[i].key;
+    if(key!==NAV.active&&NAV.onSelect){NAV.onSelect(key);}else{navSetActive(NAV.active);}}
+  nav.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;start(e.touches[0].clientX);},{passive:true});
+  nav.addEventListener('touchmove',function(e){if(!dragging)return;if(e.cancelable)e.preventDefault();move(e.touches[0].clientX);},{passive:false});
+  nav.addEventListener('touchend',function(e){if(!dragging)return;if(e.cancelable)e.preventDefault();end();},{passive:false});
+  nav.addEventListener('touchcancel',function(){dragging=false;nav.classList.remove('dragging');navSetActive(NAV.active);},{passive:true});
+  nav.addEventListener('mousedown',function(e){e.preventDefault();start(e.clientX);});
+  window.addEventListener('mousemove',function(e){if(dragging)move(e.clientX);});
+  window.addEventListener('mouseup',function(){if(dragging)end();});
+  nav.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.navitem');if(!b||dragging)return;var k=b.dataset.k;if(k!==NAV.active&&NAV.onSelect)NAV.onSelect(k);});}
 function buzz(){try{navigator.vibrate&&navigator.vibrate(8);}catch(e){}}
 function initSwipe(el,onSwipe,nTabs){if(!el)return;var x0=null,y0=null,dx=0,lock=null,base=0;
-  function nav(){return document.getElementById('nav');}
-  function drag(on){var n=nav();if(n)n.classList.toggle('dragging',on);}
-  el.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=0;lock=null;base=activeIndex();el.style.transition='none';},{passive:true});
+  function drag(on){var n=navEl();if(n)n.classList.toggle('dragging',on);}
+  el.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=0;lock=null;base=navIndexOf(NAV.active);el.style.transition='none';},{passive:true});
   el.addEventListener('touchmove',function(e){if(x0==null)return;var t=e.touches[0];dx=t.clientX-x0;var dy=t.clientY-y0;
     if(lock===null&&(Math.abs(dx)>8||Math.abs(dy)>8)){lock=Math.abs(dx)>Math.abs(dy)*1.25?'x':'y';if(lock==='x')drag(true);}
     if(lock==='x'){if(e.cancelable)e.preventDefault();
-      var W=el.clientWidth||360;var ratio=Math.max(-1,Math.min(1,dx/W));
-      var idx=base-ratio*1.15;                       /* la barra sigue al dedo */
+      var W=el.clientWidth||360;var ratio=Math.max(-1,Math.min(1,dx/W));var idx=base-ratio*1.15;
       if(nTabs)idx=Math.max(0,Math.min(nTabs-1,idx));
-      indicatorAt(idx);
-      el.style.transform='translateX('+(dx*0.4)+'px)';el.style.opacity=String(Math.max(.55,1-Math.abs(dx)/700));}},{passive:false});
+      indicatorAt(idx);el.style.transform='translateX('+(dx*0.4)+'px)';el.style.opacity=String(Math.max(.55,1-Math.abs(dx)/700));}},{passive:false});
   function end(){if(x0==null)return;drag(false);el.style.transition='transform .3s cubic-bezier(.22,.9,.3,1),opacity .3s';el.style.transform='';el.style.opacity='';
-    var moved=(lock==='x'&&Math.abs(dx)>55);if(moved){buzz();onSwipe(dx<0?1:-1);}else{placeIndicator();}x0=null;lock=null;}
+    if(lock==='x'&&Math.abs(dx)>55){buzz();onSwipe(dx<0?1:-1);}else{placeIndicator();}x0=null;lock=null;}
   el.addEventListener('touchend',end,{passive:true});
   el.addEventListener('touchcancel',function(){drag(false);el.style.transition='';el.style.transform='';el.style.opacity='';placeIndicator();x0=null;lock=null;},{passive:true});}
-function initHomeNav(active){placeIndicator();setTimeout(placeIndicator,60);
-  initSwipe(document.querySelector('.content'),function(dir){var i=HOME_ROUTES.indexOf(active==='inicio'?'#/':active==='progreso'?'#/progreso':'#/ajustes');var n=i+dir;if(n<0||n>=HOME_ROUTES.length){placeIndicator();return;}location.hash=HOME_ROUTES[n];},HOME_ROUTES.length);}
+function mountHomeNav(active){mountNav('home',HOME_TABS,function(k){var t=HOME_TABS.filter(function(x){return x.key===k;})[0];if(t)location.hash=t.route;},active);
+  initSwipe(document.querySelector('.content'),function(dir){var i=navIndexOf(active)+dir;if(i<0||i>=HOME_TABS.length){placeIndicator();return;}location.hash=HOME_TABS[i].route;},HOME_TABS.length);}
 window.addEventListener('resize',function(){placeIndicator();});
 
 /* ---------- stats helpers ---------- */
@@ -197,12 +227,12 @@ function renderHome(){clearTimer();
       '<div class="quick"><button class="qbtn" data-go="#/race/'+featured.id+'/mapa">'+I.mapa+'<span>Mapa</span></button><button class="qbtn" data-go="#/race/'+featured.id+'/ritmos">'+I.ritmos+'<span>Ritmos</span></button><button class="qbtn" data-go="#/race/'+featured.id+'/carrera">'+I.carrera+'<span>Dia D</span></button><button class="qbtn" data-go="#/progreso">'+I.chart+'<span>Progreso</span></button></div>';}
   if(rest.length){html+='<div class="section-label">Otras carreras</div>';rest.forEach(function(r){var past=daysLeft(r.date)<0;var rs=resultOf(r.id);html+='<a class="minicard" href="#/race/'+r.id+'"><span class="mc-mini">'+miniProfile(r.profile)+'</span><span><span class="mc-n">'+r.name+'</span><span class="mc-d">'+fmtDate(r.date)+' &middot; '+r.dist+' &middot; '+r.gain+'</span></span><span class="mc-cd">'+(past?(rs?I.trophy+' '+esc(rs.tiempo):'hecha'):'faltan '+cd(r.date))+'</span></a>';});}
   if(!races.length)html+='<div class="card"><p class="lead" style="margin:0">Aun no hay carreras. Pasale a Claude un GPX y una fecha para anadir la primera.</p></div>';
-  html+='</div>'+homeNav('inicio')+'</div>';app().innerHTML=html;window.scrollTo(0,0);initHomeNav('inicio');}
+  html+='</div></div>';app().innerHTML=html;window.scrollTo(0,0);mountHomeNav('inicio');}
 
 /* ---------- PROGRESO ---------- */
 function renderProgreso(){clearTimer();var race=featuredRace();var P=window.PROFILE||{};
   var html='<div class="view"><header class="home-head"><div class="kicker">Seguimiento</div><h1>Mi <span class="devil">progreso</span></h1>';
-  if(!race){html+='</header><div class="wrap content"><div class="card"><p class="lead" style="margin:0">Sin carreras aun.</p></div></div>'+homeNav('progreso')+'</div>';app().innerHTML=html;initHomeNav('progreso');return;}
+  if(!race){html+='</header><div class="wrap content"><div class="card"><p class="lead" style="margin:0">Sin carreras aun.</p></div></div></div>';app().innerHTML=html;mountHomeNav('progreso');return;}
   prep(race);var logs=getJ(KEYS(race.id).log);var weeks=weekStats(race);var tp=0,td=0,np=0,nd=0;weeks.forEach(function(w){tp+=w.plan;td+=w.done;np+=w.n;nd+=w.nd;});
   var ad=adherence(race),sk=streak(race);
   html+='<div class="meta">'+race.name+' &middot; '+nd+'/'+np+' sesiones</div></header><div class="wrap content">';
@@ -218,7 +248,7 @@ function renderProgreso(){clearTimer();var race=featuredRace();var P=window.PROF
   var wi=-1;race.days.forEach(function(x){if(x.w){flush();wi++;week=weeks[wi];wHtml='';return;}if(!x.isTraining&&!x.race)return;var l=logs[x.iso]||{};var done=!!l.hecho;var isT=daysLeft(x.iso)===0;
     wHtml+='<button class="sess'+(done?' done':'')+(isT?' today':'')+'" data-go="#/race/'+race.id+'/dias/'+x.iso+(x.race?'':'/log')+'"><span class="bar b-'+x.type+'"></span><span class="date"><span class="d">'+x.d+'</span><span class="m">'+x.m+'</span></span><span class="mid"><span class="ent">'+(x.race?'CARRERA &middot; '+race.name:x.ent)+'</span><span class="kc">'+(done?(l.km?l.km+' km':'')+(l.tiempo?' &middot; '+l.tiempo:'')+(l.km&&l.tiempo?' &middot; '+fmtPace(parseTime(l.tiempo),parseFloat(String(l.km).replace(',','.'))):''):(x.race?'Dia D':'Pendiente &middot; '+x.planKm+' km'))+'</span></span><span class="st">'+(done?'<span class="ok">'+I.check+'</span>':I.arrow)+'</span></button>';});
   flush();
-  html+='<button class="btn wide-btn" id="share-prog">'+I.share+' Compartir resumen</button></div>'+homeNav('progreso')+'</div>';app().innerHTML=html;window.scrollTo(0,0);initHomeNav('progreso');
+  html+='<button class="btn wide-btn" id="share-prog">'+I.share+' Compartir resumen</button></div></div>';app().innerHTML=html;window.scrollTo(0,0);mountHomeNav('progreso');
   document.getElementById('wt-save').addEventListener('click',function(){var v=parseFloat(document.getElementById('wt-in').value.replace(',','.'));if(!v)return;var W=getJ('weight');W[todayISO()]=v;setJ('weight',W);toast('Peso guardado');renderProgreso();});
   document.getElementById('share-prog').addEventListener('click',function(){var txt='Progreso '+race.name+': '+num(td)+'/'+tp+' km ('+(tp?Math.round(td/tp*100):0)+'%), dieta '+ad.pct+'%, racha '+sk+' dias.';share('Mi progreso',txt);});}
 function share(title,text){if(navigator.share){navigator.share({title:title,text:text}).catch(function(){});}else if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){toast('Copiado al portapapeles');});}else{toast(text);}}
@@ -230,8 +260,8 @@ function renderAjustes(){clearTimer();var P=window.PROFILE||{};var chips=functio
     '<div class="section-label">Calendario y datos</div><div class="card">'+(race?'<button class="row-btn" id="ics">'+I.cal+'<span>Exportar plan al Calendario (.ics)</span>'+I.arrow+'</button>':'')+'<button class="row-btn" id="bk">'+I.down+'<span>Copia de seguridad (descargar)</span>'+I.arrow+'</button><label class="row-btn">'+I.up+'<span>Restaurar copia</span><input type="file" id="rs" accept="application/json,.json" hidden>'+I.arrow+'</label></div>'+
     '<div class="section-label">Reiniciar</div><div class="card"><button class="row-btn" data-reset="checks"><span>Checks del dia de carrera</span>'+I.arrow+'</button><button class="row-btn" data-reset="meals"><span>Casillas de comidas</span>'+I.arrow+'</button><button class="row-btn" data-reset="gear"><span>Lista de material</span>'+I.arrow+'</button><button class="row-btn danger" data-reset="log"><span>Registro de entrenos y peso</span>'+I.arrow+'</button></div>'+
     '<div class="section-label">Anadir carrera</div><div class="card"><p class="pf-note" style="margin:0">Pasale a Claude el GPX y la fecha. Te devuelve un archivo <b>races/nombre.js</b>: lo subes al repo, anades su nombre en <b>races/registry.js</b> y subes la version del service worker. Aparece sola aqui.</p></div>'+
-    '<p class="foot">Mis carreras v'+VERSION+' &middot; PWA hecha para Ruben</p></div>'+homeNav('ajustes')+'</div>';
-  app().innerHTML=html;window.scrollTo(0,0);initHomeNav('ajustes');
+    '<p class="foot">Mis carreras v'+VERSION+' &middot; PWA hecha para Ruben</p></div></div>';
+  app().innerHTML=html;window.scrollTo(0,0);mountHomeNav('ajustes');
   [].forEach.call(document.querySelectorAll('[data-reset]'),function(b){b.addEventListener('click',function(){var what=b.dataset.reset;var msg={checks:'Reiniciar los checks del dia de carrera?',meals:'Reiniciar las casillas de comidas?',gear:'Reiniciar la lista de material?',log:'Borrar TODO el registro de entrenos y peso? No se puede deshacer.'}[what];if(!confirm(msg))return;
     window.RACES.forEach(function(r){var K=KEYS(r.id);try{store&&store.removeItem({checks:K.checks,meals:K.meals,gear:K.gear,log:K.log}[what]);}catch(e){}});if(what==='log'){try{store&&store.removeItem('weight');}catch(e){}}toast('Hecho');});});
   var ics=document.getElementById('ics');if(ics)ics.addEventListener('click',function(){downloadText('plan-'+race.id+'.ics',buildICS(race),'text/calendar');toast('Calendario generado. Abrelo y anade los eventos.');});
@@ -261,7 +291,7 @@ function renderRace(race,tab,focusIso,openLog){clearTimer();prep(race);tab=tab||
       '<div class="phase">'+I.bag+' Que llevar</div><div id="gear"></div>'+
       '<div class="phase">'+I.trophy+' Mi resultado</div><div class="card"><div class="lb-grid"><label>Tiempo<input type="text" inputmode="numeric" id="r-t" value="'+esc(res?res.tiempo:'')+'" placeholder="h:mm:ss"></label><label>Puesto<input type="text" id="r-p" value="'+esc(res?res.puesto:'')+'" placeholder="2º / 15º cat"></label><label class="wide">Notas<input type="text" id="r-n" value="'+esc(res?res.notas:'')+'" placeholder="Como fue, sensaciones, que repetir..."></label></div><div class="lb-foot"><span class="lb-pace" id="r-pace">'+(res&&res.tiempo?fmtPace(parseTime(res.tiempo),race.totalKm):'')+'</span><button class="btn sm" id="r-share">'+I.share+'</button><button class="btn primary sm" id="r-save">Guardar</button></div></div>'+
       '<p class="foot">Cantidades para '+(window.PROFILE?window.PROFILE.peso:'tu peso')+'. Ajusta al hambre real.</p></section>'+
-    '</div><nav class="bottomnav" id="nav"><span class="nav-ind"></span>'+[['dias',I.dias,'Dias'],['mapa',I.mapa,'Mapa'],['ritmos',I.ritmos,'Ritmos'],['carrera',I.carrera,'Carrera']].map(function(t){return '<button class="navitem" data-tab="'+t[0]+'"><span class="ni-ic">'+t[1]+'<i class="ni-dot"></i></span><span class="ni-lb">'+t[2]+'</span></button>';}).join('')+'</nav></div>';
+    '</div></div>';
   app().innerHTML=html;window.scrollTo(0,0);
 
   /* days */
@@ -298,24 +328,22 @@ function renderRace(race,tab,focusIso,openLog){clearTimer();prep(race);tab=tab||
 
   /* tabs */
   var TABS=['dias','mapa','ritmos','carrera'];
-  var items=[].slice.call(document.querySelectorAll('.navitem[data-tab]'));var panels={dias:document.getElementById('dias'),mapa:document.getElementById('mapa'),ritmos:document.getElementById('ritmos'),carrera:document.getElementById('carrera')};var scrubInit=false;var curTab=null;
+  var RACE_TABS=[{key:'dias',icon:I.dias,label:'Dias'},{key:'mapa',icon:I.mapa,label:'Mapa'},{key:'ritmos',icon:I.ritmos,label:'Ritmos'},{key:'carrera',icon:I.carrera,label:'Carrera'}];
+  var panels={dias:document.getElementById('dias'),mapa:document.getElementById('mapa'),ritmos:document.getElementById('ritmos'),carrera:document.getElementById('carrera')};var scrubInit=false;var curTab=null;
   window.switchTab=function(name,noScroll){if(name===curTab&&!noScroll)return;
     var dir=(curTab==null)?0:(TABS.indexOf(name)>TABS.indexOf(curTab)?1:-1);curTab=name;
-    items.forEach(function(t){t.classList.toggle('active',t.dataset.tab===name);});
     Object.keys(panels).forEach(function(k){var p=panels[k];p.classList.remove('slide-r','slide-l');p.classList.toggle('on',k===name);});
     if(dir){panels[name].classList.add(dir>0?'slide-r':'slide-l');}
     if(name==='mapa'&&!scrubInit){scrubInit=true;initScrubber(race);}
-    placeIndicator();
+    navSetActive(name);
     var h='#/race/'+race.id+(name==='dias'?'':'/'+name);if(location.hash!==h){history.replaceState(null,'',h);}
     if(!noScroll)window.scrollTo({top:0,behavior:'smooth'});};
-  items.forEach(function(t){t.addEventListener('click',function(){buzz();switchTab(t.dataset.tab);});});switchTab(tab,true);
-  setTimeout(placeIndicator,60);
+  mountNav('race:'+race.id,RACE_TABS,function(k){switchTab(k);},tab);
+  switchTab(tab,true);
   initSwipe(document.querySelector('.content'),function(d){var i=TABS.indexOf(curTab)+d;if(i<0||i>=TABS.length){placeIndicator();return;}switchTab(TABS[i]);},TABS.length);
-  /* nav dots */
   (function(){var t=todayISO();var td=race.days.filter(function(x){return !x.w&&x.iso===t;})[0];
-    if(td&&td.menu){var m=getJ(K.meals)[t]||{};var n=Object.keys(m).filter(function(k){return m[k];}).length;
-      if(n<td.menu.length){var b=items[0].querySelector('.ni-dot');b&&b.classList.add('on');}}
-    if(daysLeft(race.date)===0){var c=items[3].querySelector('.ni-dot');c&&c.classList.add('on');}})();
+    var pend=false;if(td&&td.menu){var m=getJ(K.meals)[t]||{};pend=Object.keys(m).filter(function(k){return m[k];}).length<td.menu.length;}
+    navDot('dias',pend);navDot('carrera',daysLeft(race.date)===0);})();
   /* iOS-style top bar on scroll */
   (function(){var tb=document.getElementById('topbar');if(!tb)return;var f=false;
     window.addEventListener('scroll',function(){var s=window.scrollY>170;if(s!==f){f=s;tb.classList.toggle('show',s);}},{passive:true});})();

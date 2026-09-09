@@ -406,3 +406,17 @@ body{
 .tb-back{appearance:none;background:transparent;border:0;color:var(--ember);cursor:pointer;padding:8px 4px 8px 12px;display:flex}
 .tb-back svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .tb-title{font-size:16px;font-weight:700;letter-spacing:-.01em;flex:1;text-align:center;padding-right:40px}
+
+/* ================= v2.3 · barra persistente + arrastre ================= */
+/* La barra vive fuera de la vista: no se repinta al cambiar de pantalla */
+#navhost{position:relative;z-index:40}
+/* touch-action:none -> el dedo sobre la barra la controla a ella, no al scroll */
+.bottomnav{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.bottomnav.dragging{cursor:grabbing}
+.bottomnav.dragging .nav-ind{transition:opacity .2s}
+.bottomnav.dragging .ni-ic{transition:none}
+.bottomnav.dragging .navitem{transition:color .12s}
+.bottomnav.dragging .nav-ind{background:linear-gradient(180deg,rgba(255,90,44,.30),rgba(255,90,44,.16));border-color:rgba(255,90,44,.55)}
+.navitem{-webkit-touch-callout:none}
+/* la vista ya no arrastra a la barra en su animacion de entrada */
+.view{animation:viewIn .3s cubic-bezier(.22,.9,.3,1)}
