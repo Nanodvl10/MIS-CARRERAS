@@ -2,7 +2,7 @@
 "use strict";
 window.RACES = window.RACES || [];
 window.registerRace = function(r){ window.RACES.push(r); };
-var VERSION="2.0";
+var VERSION="2.1";
 var typeName={suave:"Suave",medio:"Rodaje",fuerte:"Fuerte",carga:"Carga",carrera:"Carrera"};
 var MODE={hold:["#ecb63f","CONTEN"],steady:["#6f8fae","RITMO"],hike:["#ff4a30","ANDAR"],send:["#4fa76e","SUELTA"]};
 var MESES=["ene","feb","mar","abr","may","jun","jul","ago","sept","oct","nov","dic"];
@@ -122,7 +122,24 @@ function initScrubber(race){var wrapEl=document.getElementById('scrub');if(!wrap
   var j=(race.jumps||[]);update(j[1]?j[1][1]:0);}
 
 /* ---------- nav ---------- */
-function homeNav(active){return '<nav class="bottomnav"><button class="navitem'+(active==='inicio'?' active':'')+'" data-go="#/">'+I.home+'<span>Inicio</span></button><button class="navitem'+(active==='progreso'?' active':'')+'" data-go="#/progreso">'+I.chart+'<span>Progreso</span></button><button class="navitem'+(active==='ajustes'?' active':'')+'" data-go="#/ajustes">'+I.cog+'<span>Ajustes</span></button></nav>';}
+var HOME_ROUTES=['#/','#/progreso','#/ajustes'];
+function homeNav(active){var it=[['inicio',I.home,'Inicio','#/'],['progreso',I.chart,'Progreso','#/progreso'],['ajustes',I.cog,'Ajustes','#/ajustes']];
+  return '<nav class="bottomnav" id="nav"><span class="nav-ind"></span>'+it.map(function(x){return '<button class="navitem'+(active===x[0]?' active':'')+'" data-go="'+x[3]+'"><span class="ni-ic">'+x[1]+'</span><span class="ni-lb">'+x[2]+'</span></button>';}).join('')+'</nav>';}
+function placeIndicator(){var nav=document.getElementById('nav');if(!nav)return;var act=nav.querySelector('.navitem.active');var ind=nav.querySelector('.nav-ind');if(!act||!ind)return;
+  var r=act.getBoundingClientRect(),nr=nav.getBoundingClientRect();if(!r.width)return;
+  ind.style.width=(r.width-16)+'px';ind.style.transform='translateX('+(r.left-nr.left+8)+'px)';ind.style.opacity='1';}
+function buzz(){try{navigator.vibrate&&navigator.vibrate(8);}catch(e){}}
+function initSwipe(el,onSwipe){if(!el)return;var x0=null,y0=null,dx=0,lock=null;
+  el.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=0;lock=null;el.style.transition='none';},{passive:true});
+  el.addEventListener('touchmove',function(e){if(x0==null)return;var t=e.touches[0];dx=t.clientX-x0;var dy=t.clientY-y0;
+    if(lock===null&&(Math.abs(dx)>8||Math.abs(dy)>8))lock=Math.abs(dx)>Math.abs(dy)*1.25?'x':'y';
+    if(lock==='x'){if(e.cancelable)e.preventDefault();el.style.transform='translateX('+(dx*0.4)+'px)';el.style.opacity=String(Math.max(.55,1-Math.abs(dx)/700));}},{passive:false});
+  el.addEventListener('touchend',function(){if(x0==null)return;el.style.transition='transform .3s cubic-bezier(.22,.9,.3,1),opacity .3s';el.style.transform='';el.style.opacity='';
+    if(lock==='x'&&Math.abs(dx)>55){buzz();onSwipe(dx<0?1:-1);}x0=null;lock=null;},{passive:true});
+  el.addEventListener('touchcancel',function(){el.style.transition='';el.style.transform='';el.style.opacity='';x0=null;lock=null;},{passive:true});}
+function initHomeNav(active){placeIndicator();setTimeout(placeIndicator,60);
+  initSwipe(document.querySelector('.content'),function(dir){var i=HOME_ROUTES.indexOf(active==='inicio'?'#/':active==='progreso'?'#/progreso':'#/ajustes');var n=i+dir;if(n<0||n>=HOME_ROUTES.length)return;location.hash=HOME_ROUTES[n];});}
+window.addEventListener('resize',function(){placeIndicator();});
 
 /* ---------- stats helpers ---------- */
 function adherence(race){var meals=getJ(KEYS(race.id).meals);var t=todayISO();var done=0,tot=0;race.days.forEach(function(x){if(x.w||!x.menu||x.iso>t)return;tot+=x.menu.length;var m=meals[x.iso]||{};done+=Object.keys(m).filter(function(k){return m[k];}).length;});return {done:done,tot:tot,pct:tot?Math.round(done/tot*100):0};}
@@ -160,12 +177,12 @@ function renderHome(){clearTimer();
       '<div class="quick"><button class="qbtn" data-go="#/race/'+featured.id+'/mapa">'+I.mapa+'<span>Mapa</span></button><button class="qbtn" data-go="#/race/'+featured.id+'/ritmos">'+I.ritmos+'<span>Ritmos</span></button><button class="qbtn" data-go="#/race/'+featured.id+'/carrera">'+I.carrera+'<span>Dia D</span></button><button class="qbtn" data-go="#/progreso">'+I.chart+'<span>Progreso</span></button></div>';}
   if(rest.length){html+='<div class="section-label">Otras carreras</div>';rest.forEach(function(r){var past=daysLeft(r.date)<0;var rs=resultOf(r.id);html+='<a class="minicard" href="#/race/'+r.id+'"><span class="mc-mini">'+miniProfile(r.profile)+'</span><span><span class="mc-n">'+r.name+'</span><span class="mc-d">'+fmtDate(r.date)+' &middot; '+r.dist+' &middot; '+r.gain+'</span></span><span class="mc-cd">'+(past?(rs?I.trophy+' '+esc(rs.tiempo):'hecha'):'faltan '+cd(r.date))+'</span></a>';});}
   if(!races.length)html+='<div class="card"><p class="lead" style="margin:0">Aun no hay carreras. Pasale a Claude un GPX y una fecha para anadir la primera.</p></div>';
-  html+='</div>'+homeNav('inicio')+'</div>';app().innerHTML=html;window.scrollTo(0,0);}
+  html+='</div>'+homeNav('inicio')+'</div>';app().innerHTML=html;window.scrollTo(0,0);initHomeNav('inicio');}
 
 /* ---------- PROGRESO ---------- */
 function renderProgreso(){clearTimer();var race=featuredRace();var P=window.PROFILE||{};
   var html='<div class="view"><header class="home-head"><div class="kicker">Seguimiento</div><h1>Mi <span class="devil">progreso</span></h1>';
-  if(!race){html+='</header><div class="wrap content"><div class="card"><p class="lead" style="margin:0">Sin carreras aun.</p></div></div>'+homeNav('progreso')+'</div>';app().innerHTML=html;return;}
+  if(!race){html+='</header><div class="wrap content"><div class="card"><p class="lead" style="margin:0">Sin carreras aun.</p></div></div>'+homeNav('progreso')+'</div>';app().innerHTML=html;initHomeNav('progreso');return;}
   prep(race);var logs=getJ(KEYS(race.id).log);var weeks=weekStats(race);var tp=0,td=0,np=0,nd=0;weeks.forEach(function(w){tp+=w.plan;td+=w.done;np+=w.n;nd+=w.nd;});
   var ad=adherence(race),sk=streak(race);
   html+='<div class="meta">'+race.name+' &middot; '+nd+'/'+np+' sesiones</div></header><div class="wrap content">';
@@ -181,7 +198,7 @@ function renderProgreso(){clearTimer();var race=featuredRace();var P=window.PROF
   var wi=-1;race.days.forEach(function(x){if(x.w){flush();wi++;week=weeks[wi];wHtml='';return;}if(!x.isTraining&&!x.race)return;var l=logs[x.iso]||{};var done=!!l.hecho;var isT=daysLeft(x.iso)===0;
     wHtml+='<button class="sess'+(done?' done':'')+(isT?' today':'')+'" data-go="#/race/'+race.id+'/dias/'+x.iso+(x.race?'':'/log')+'"><span class="bar b-'+x.type+'"></span><span class="date"><span class="d">'+x.d+'</span><span class="m">'+x.m+'</span></span><span class="mid"><span class="ent">'+(x.race?'CARRERA &middot; '+race.name:x.ent)+'</span><span class="kc">'+(done?(l.km?l.km+' km':'')+(l.tiempo?' &middot; '+l.tiempo:'')+(l.km&&l.tiempo?' &middot; '+fmtPace(parseTime(l.tiempo),parseFloat(String(l.km).replace(',','.'))):''):(x.race?'Dia D':'Pendiente &middot; '+x.planKm+' km'))+'</span></span><span class="st">'+(done?'<span class="ok">'+I.check+'</span>':I.arrow)+'</span></button>';});
   flush();
-  html+='<button class="btn wide-btn" id="share-prog">'+I.share+' Compartir resumen</button></div>'+homeNav('progreso')+'</div>';app().innerHTML=html;window.scrollTo(0,0);
+  html+='<button class="btn wide-btn" id="share-prog">'+I.share+' Compartir resumen</button></div>'+homeNav('progreso')+'</div>';app().innerHTML=html;window.scrollTo(0,0);initHomeNav('progreso');
   document.getElementById('wt-save').addEventListener('click',function(){var v=parseFloat(document.getElementById('wt-in').value.replace(',','.'));if(!v)return;var W=getJ('weight');W[todayISO()]=v;setJ('weight',W);toast('Peso guardado');renderProgreso();});
   document.getElementById('share-prog').addEventListener('click',function(){var txt='Progreso '+race.name+': '+num(td)+'/'+tp+' km ('+(tp?Math.round(td/tp*100):0)+'%), dieta '+ad.pct+'%, racha '+sk+' dias.';share('Mi progreso',txt);});}
 function share(title,text){if(navigator.share){navigator.share({title:title,text:text}).catch(function(){});}else if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){toast('Copiado al portapapeles');});}else{toast(text);}}
@@ -194,7 +211,7 @@ function renderAjustes(){clearTimer();var P=window.PROFILE||{};var chips=functio
     '<div class="section-label">Reiniciar</div><div class="card"><button class="row-btn" data-reset="checks"><span>Checks del dia de carrera</span>'+I.arrow+'</button><button class="row-btn" data-reset="meals"><span>Casillas de comidas</span>'+I.arrow+'</button><button class="row-btn" data-reset="gear"><span>Lista de material</span>'+I.arrow+'</button><button class="row-btn danger" data-reset="log"><span>Registro de entrenos y peso</span>'+I.arrow+'</button></div>'+
     '<div class="section-label">Anadir carrera</div><div class="card"><p class="pf-note" style="margin:0">Pasale a Claude el GPX y la fecha. Te devuelve un archivo <b>races/nombre.js</b>: lo subes al repo, anades su nombre en <b>races/registry.js</b> y subes la version del service worker. Aparece sola aqui.</p></div>'+
     '<p class="foot">Mis carreras v'+VERSION+' &middot; PWA hecha para Ruben</p></div>'+homeNav('ajustes')+'</div>';
-  app().innerHTML=html;window.scrollTo(0,0);
+  app().innerHTML=html;window.scrollTo(0,0);initHomeNav('ajustes');
   [].forEach.call(document.querySelectorAll('[data-reset]'),function(b){b.addEventListener('click',function(){var what=b.dataset.reset;var msg={checks:'Reiniciar los checks del dia de carrera?',meals:'Reiniciar las casillas de comidas?',gear:'Reiniciar la lista de material?',log:'Borrar TODO el registro de entrenos y peso? No se puede deshacer.'}[what];if(!confirm(msg))return;
     window.RACES.forEach(function(r){var K=KEYS(r.id);try{store&&store.removeItem({checks:K.checks,meals:K.meals,gear:K.gear,log:K.log}[what]);}catch(e){}});if(what==='log'){try{store&&store.removeItem('weight');}catch(e){}}toast('Hecho');});});
   var ics=document.getElementById('ics');if(ics)ics.addEventListener('click',function(){downloadText('plan-'+race.id+'.ics',buildICS(race),'text/calendar');toast('Calendario generado. Abrelo y anade los eventos.');});
@@ -211,7 +228,7 @@ function buildICS(race){prep(race);var L=['BEGIN:VCALENDAR','VERSION:2.0','PRODI
 /* ---------- RACE ---------- */
 var DEFAULT_GEAR=["Dorsal e imperdibles / chip","Geles (uno con cafeina)","Bidon con isotonica","Reloj cargado","Zapatillas (las de siempre)","Ropa segun el tiempo + cortavientos","Gorra y gafas","Desayuno preparado","Recuperador para la meta","Ropa de cambio y toalla","Coche con gasolina, salir con margen"];
 function renderRace(race,tab,focusIso,openLog){clearTimer();prep(race);tab=tab||'dias';var past=daysLeft(race.date)<0,dl=daysLeft(race.date);var K=KEYS(race.id);var res=resultOf(race.id);var jumps=race.jumps||[["Salida",0],["Meta",race.totalKm]];
-  var html='<div class="view"><button class="backfab" data-go="#/" aria-label="Volver">'+I.back+'</button><div class="cd-pill'+(past?' past':'')+'">'+(past?(res?I.trophy+' '+esc(res.tiempo):'hecha'):'faltan '+cd(race.date))+'</div>'+
+  var html='<div class="view"><div class="topbar" id="topbar"><button class="tb-back" data-go="#/">'+I.back+'</button><span class="tb-title">'+race.name+'</span></div><button class="backfab" data-go="#/" aria-label="Volver">'+I.back+'</button><div class="cd-pill'+(past?' past':'')+'">'+(past?(res?I.trophy+' '+esc(res.tiempo):'hecha'):'faltan '+cd(race.date))+'</div>'+
     '<div class="rhero">'+heroProfile(race.profile,'rhero-svg')+'<div class="rhero-fade"></div><div class="rhero-body"><div class="rhero-kick">'+(race.kind||'Trail')+' &middot; plan de carrera</div><div class="rhero-title">'+(race.nameHTML||race.name)+'</div><div class="rhero-sub">'+race.subtitle+' &middot; <b>'+fmtDate(race.date)+', '+race.time+'</b></div></div></div>'+
     '<div class="stats"><div class="stat"><div class="n ember">'+race.km+'</div><div class="l">km</div></div><div class="stat"><div class="n ember">'+race.dplus+'</div><div class="l">metros +</div></div><div class="stat"><div class="n">'+race.estimate+'</div><div class="l">objetivo</div></div></div>'+
     '<div class="content wrap">'+
@@ -224,7 +241,7 @@ function renderRace(race,tab,focusIso,openLog){clearTimer();prep(race);tab=tab||
       '<div class="phase">'+I.bag+' Que llevar</div><div id="gear"></div>'+
       '<div class="phase">'+I.trophy+' Mi resultado</div><div class="card"><div class="lb-grid"><label>Tiempo<input type="text" inputmode="numeric" id="r-t" value="'+esc(res?res.tiempo:'')+'" placeholder="h:mm:ss"></label><label>Puesto<input type="text" id="r-p" value="'+esc(res?res.puesto:'')+'" placeholder="2º / 15º cat"></label><label class="wide">Notas<input type="text" id="r-n" value="'+esc(res?res.notas:'')+'" placeholder="Como fue, sensaciones, que repetir..."></label></div><div class="lb-foot"><span class="lb-pace" id="r-pace">'+(res&&res.tiempo?fmtPace(parseTime(res.tiempo),race.totalKm):'')+'</span><button class="btn sm" id="r-share">'+I.share+'</button><button class="btn primary sm" id="r-save">Guardar</button></div></div>'+
       '<p class="foot">Cantidades para '+(window.PROFILE?window.PROFILE.peso:'tu peso')+'. Ajusta al hambre real.</p></section>'+
-    '</div><nav class="bottomnav"><button class="navitem" data-tab="dias">'+I.dias+'<span>Dias</span></button><button class="navitem" data-tab="mapa">'+I.mapa+'<span>Mapa</span></button><button class="navitem" data-tab="ritmos">'+I.ritmos+'<span>Ritmos</span></button><button class="navitem" data-tab="carrera">'+I.carrera+'<span>Carrera</span></button></nav></div>';
+    '</div><nav class="bottomnav" id="nav"><span class="nav-ind"></span>'+[['dias',I.dias,'Dias'],['mapa',I.mapa,'Mapa'],['ritmos',I.ritmos,'Ritmos'],['carrera',I.carrera,'Carrera']].map(function(t){return '<button class="navitem" data-tab="'+t[0]+'"><span class="ni-ic">'+t[1]+'<i class="ni-dot"></i></span><span class="ni-lb">'+t[2]+'</span></button>';}).join('')+'</nav></div>';
   app().innerHTML=html;window.scrollTo(0,0);
 
   /* days */
@@ -260,9 +277,28 @@ function renderRace(race,tab,focusIso,openLog){clearTimer();prep(race);tab=tab||
   renderRaceMode(race);
 
   /* tabs */
-  var items=[].slice.call(document.querySelectorAll('.navitem[data-tab]'));var panels={dias:document.getElementById('dias'),mapa:document.getElementById('mapa'),ritmos:document.getElementById('ritmos'),carrera:document.getElementById('carrera')};var scrubInit=false;
-  window.switchTab=function(name,noScroll){items.forEach(function(t){t.classList.toggle('active',t.dataset.tab===name);});Object.keys(panels).forEach(function(k){panels[k].classList.toggle('on',k===name);});if(name==='mapa'&&!scrubInit){scrubInit=true;initScrubber(race);}var h='#/race/'+race.id+(name==='dias'?'':'/'+name);if(location.hash!==h){history.replaceState(null,'',h);}if(!noScroll)window.scrollTo({top:0,behavior:'smooth'});};
-  items.forEach(function(t){t.addEventListener('click',function(){switchTab(t.dataset.tab);});});switchTab(tab,true);
+  var TABS=['dias','mapa','ritmos','carrera'];
+  var items=[].slice.call(document.querySelectorAll('.navitem[data-tab]'));var panels={dias:document.getElementById('dias'),mapa:document.getElementById('mapa'),ritmos:document.getElementById('ritmos'),carrera:document.getElementById('carrera')};var scrubInit=false;var curTab=null;
+  window.switchTab=function(name,noScroll){if(name===curTab&&!noScroll)return;
+    var dir=(curTab==null)?0:(TABS.indexOf(name)>TABS.indexOf(curTab)?1:-1);curTab=name;
+    items.forEach(function(t){t.classList.toggle('active',t.dataset.tab===name);});
+    Object.keys(panels).forEach(function(k){var p=panels[k];p.classList.remove('slide-r','slide-l');p.classList.toggle('on',k===name);});
+    if(dir){panels[name].classList.add(dir>0?'slide-r':'slide-l');}
+    if(name==='mapa'&&!scrubInit){scrubInit=true;initScrubber(race);}
+    placeIndicator();
+    var h='#/race/'+race.id+(name==='dias'?'':'/'+name);if(location.hash!==h){history.replaceState(null,'',h);}
+    if(!noScroll)window.scrollTo({top:0,behavior:'smooth'});};
+  items.forEach(function(t){t.addEventListener('click',function(){buzz();switchTab(t.dataset.tab);});});switchTab(tab,true);
+  setTimeout(placeIndicator,60);
+  initSwipe(document.querySelector('.content'),function(d){var i=TABS.indexOf(curTab)+d;if(i<0||i>=TABS.length)return;switchTab(TABS[i]);});
+  /* nav dots */
+  (function(){var t=todayISO();var td=race.days.filter(function(x){return !x.w&&x.iso===t;})[0];
+    if(td&&td.menu){var m=getJ(K.meals)[t]||{};var n=Object.keys(m).filter(function(k){return m[k];}).length;
+      if(n<td.menu.length){var b=items[0].querySelector('.ni-dot');b&&b.classList.add('on');}}
+    if(daysLeft(race.date)===0){var c=items[3].querySelector('.ni-dot');c&&c.classList.add('on');}})();
+  /* iOS-style top bar on scroll */
+  (function(){var tb=document.getElementById('topbar');if(!tb)return;var f=false;
+    window.addEventListener('scroll',function(){var s=window.scrollY>170;if(s!==f){f=s;tb.classList.toggle('show',s);}},{passive:true});})();
   if(focusEl){focusEl._setOpen&&focusEl._setOpen(true);setTimeout(function(){focusEl.scrollIntoView({behavior:'smooth',block:'start'});if(openLog){var inp=focusEl.querySelector('.logbox input');inp&&inp.focus();}},120);}
   if(!matchMedia('(prefers-reduced-motion:reduce)').matches){var hl=document.querySelector('.rhero-svg .hp-line');if(hl&&hl.getTotalLength){try{var len=hl.getTotalLength();hl.style.strokeDasharray=len;hl.style.strokeDashoffset=len;requestAnimationFrame(function(){hl.style.transition='stroke-dashoffset 1.4s ease';hl.style.strokeDashoffset=0;});}catch(e){}}}}
 
