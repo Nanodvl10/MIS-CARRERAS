@@ -363,11 +363,13 @@ body{
 #toast button{appearance:none;border:0;background:var(--ember);color:#160a05;font-family:inherit;font-weight:800;font-size:12.5px;padding:7px 12px;border-radius:10px;cursor:pointer}
 
 /* ================= v2.1 · iOS-style navigation ================= */
-.bottomnav{position:relative}
+/* NO tocar position aqui: .bottomnav es fixed y ya crea el contexto para .nav-ind */
 .nav-ind{position:absolute;top:7px;left:0;height:calc(var(--nav-h) - 14px);border-radius:14px;
   background:linear-gradient(180deg,rgba(255,90,44,.22),rgba(255,90,44,.10));
   border:1px solid rgba(255,90,44,.35);opacity:0;pointer-events:none;
   transition:transform .42s cubic-bezier(.34,1.56,.5,1),width .32s cubic-bezier(.34,1.4,.5,1),opacity .2s;z-index:0}
+.bottomnav.dragging .nav-ind{transition:opacity .2s}
+.bottomnav.dragging .ni-ic{transition:none}
 .navitem{position:relative;z-index:1;gap:0;padding:6px 0}
 .ni-ic{position:relative;display:flex;align-items:center;justify-content:center;height:26px;
   transition:transform .34s cubic-bezier(.34,1.56,.5,1)}
