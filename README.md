@@ -1,37 +1,38 @@
-# Mis carreras — app personal de trail (PWA)
+# Mis carreras — app personal de trail (PWA) · v2.0
 
-App tuya para gestionar carreras: cada una con su recorrido, dieta dia a dia,
-ritmos por tramo y plan del dia de carrera. Se instala en el movil como una app
-normal, funciona sin conexion y no cuesta nada.
+App para gestionar carreras: recorrido interactivo, dieta dia a dia con casillas,
+registro de entrenos, ritmos, modo carrera el dia D, progreso, peso y resultados.
+Se instala en el movil como app, funciona sin conexion y es gratis.
 
 ## Estructura
-- `index.html` — arranque (solo enlaza estilos, motor y carreras).
-- `styles.css` — estilos.
-- `app.js` — el motor: pinta la pantalla "Mis carreras" y cualquier carrera desde sus datos.
-- `profile.js` — TUS preferencias (peso, horarios, alimentos que no te gustan, reglas).
-- `races/` — una carrera por archivo. `corral-del-diablo.js` es la primera.
+- `index.html`      arranque (solo enlaza estilos, motor, perfil y registro).
+- `styles.css`      estilos.
+- `app.js`          motor: pinta todo a partir de los datos.
+- `profile.js`      TUS preferencias (peso, horarios, lo que no te gusta, reglas).
+- `races/registry.js`  lista de archivos de carrera que carga la app.
+- `races/<id>.js`   una carrera por archivo. `_PLANTILLA.js` muestra la estructura.
 - `manifest.json`, `service-worker.js`, iconos.
 
-## Como anadir una carrera nueva
-1. Pasale a Claude el **GPX + fecha y hora**. Te devuelve un archivo tipo
-   `races/mi-carrera.js` con el recorrido, la dieta (respetando tu `profile.js`),
-   los ritmos y el plan.
-2. Copia ese archivo en la carpeta `races/`.
-3. En `index.html`, anade una linea junto a la del Corral:
-   `<script src="races/mi-carrera.js"></script>`
-4. En `service-worker.js`: anade el archivo a la lista `ASSETS` y sube la version
-   del `CACHE` (p. ej. `carreras-v2`) para forzar el refresco.
-5. Redespliega. La carrera aparece sola en la lista "Mis carreras".
+## Anadir una carrera (p. ej. la San Silvestre)
+1. Pasale a Claude el GPX (o el recorrido) + fecha y hora. Te devuelve `races/san-silvestre-salmantina.js`.
+2. Sube ese archivo a la carpeta `races/` del repo.
+3. En `races/registry.js` anade `"san-silvestre-salmantina.js"` a la lista.
+4. En `service-worker.js` sube la version del `CACHE` (p. ej. `carreras-v5`).
+   (Opcional: anade el archivo a `ASSETS` para que este offline desde el primer arranque.)
+5. Commit. Al abrir la app vera "Nueva version lista" -> Actualizar. La carrera aparece sola.
 
-## Desplegar (necesita URL https)
-- **GitHub Pages** (rapido, gratis): sube todo a un repo, Settings -> Pages ->
-  branch main / carpeta raiz. Tendras `https://usuario.github.io/repo/`.
-- **Homelab**: sirve la carpeta con Nginx/Caddy detras de tu reverse proxy
-  (el https te lo da el proxy). Ejemplo Nginx en Docker:
-  `docker run -d -p 8080:80 -v "$PWD":/usr/share/nginx/html:ro nginx:alpine`
+## Actualizar la app (cuando cambien app.js / styles.css / datos)
+Sustituye los archivos cambiados en el repo y sube la version del `CACHE` del
+service worker. El movil avisa con "Nueva version lista".
 
-## Instalar en el movil
-Abre la URL en Safari (iPhone) o Chrome (Android) -> Compartir / menu ->
-**Anadir a pantalla de inicio**. Icono propio y pantalla completa.
+## Datos
+Todo se guarda en el movil (localStorage): entrenos, casillas, checks, material,
+resultado, cronometro y peso. En Ajustes puedes exportar una copia de seguridad
+(JSON) y restaurarla, y exportar el plan al Calendario (.ics) con avisos.
 
-Los checks del dia de carrera se guardan por carrera en el propio movil.
+## Desplegar (URL https)
+- GitHub Pages: repo -> Settings -> Pages -> branch main / root.
+- Homelab: cualquier servidor estatico (Nginx/Caddy) detras de tu reverse proxy.
+
+## Instalar en el iPhone
+Safari -> Compartir -> Anadir a pantalla de inicio (marcar "Abrir como app web").
