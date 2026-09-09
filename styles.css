@@ -288,7 +288,8 @@ body{
 
 /* scrubber */
 .scrub-card{background:var(--g800);border:1px solid var(--line);border-radius:16px;padding:10px 10px 12px;margin-bottom:10px}
-.scrub{position:relative;touch-action:pan-y;cursor:crosshair;user-select:none;-webkit-user-select:none}
+.scrub{position:relative;touch-action:none;cursor:crosshair;user-select:none;-webkit-user-select:none;overscroll-behavior:contain}
+.route-card{touch-action:pan-y}
 .scrub svg{width:100%;height:190px;display:block;overflow:visible}
 .sc-line{fill:none;stroke:var(--ember);stroke-width:5;stroke-linejoin:round;stroke-linecap:round}
 .sc-cursor{stroke:#fff;stroke-width:2.5;stroke-dasharray:6 6;opacity:.85}

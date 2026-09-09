@@ -2,7 +2,7 @@
 "use strict";
 window.RACES = window.RACES || [];
 window.registerRace = function(r){ window.RACES.push(r); };
-var VERSION="2.3";
+var VERSION="2.4";
 var typeName={suave:"Suave",medio:"Rodaje",fuerte:"Fuerte",carga:"Carga",carrera:"Carrera"};
 var MODE={hold:["#ecb63f","CONTEN"],steady:["#6f8fae","RITMO"],hike:["#ff4a30","ANDAR"],send:["#4fa76e","SUELTA"]};
 var MESES=["ene","feb","mar","abr","may","jun","jul","ago","sept","oct","nov","dic"];
@@ -174,9 +174,13 @@ function attachNavDrag(){var nav=navEl();if(!nav)return;var dragging=false,last=
   window.addEventListener('mouseup',function(){if(dragging)end();});
   nav.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.navitem');if(!b||dragging)return;var k=b.dataset.k;if(k!==NAV.active&&NAV.onSelect)NAV.onSelect(k);});}
 function buzz(){try{navigator.vibrate&&navigator.vibrate(8);}catch(e){}}
+/* Zonas donde el gesto horizontal es SUYO (no debe cambiar de pestana):
+   el perfil interactivo, el trazado, la fila de botones y los campos. */
+var NOSWIPE='.scrub,.route-card,.jumps,input,textarea,select,[data-noswipe]';
+function inNoSwipe(t){return !!(t&&t.closest&&t.closest(NOSWIPE));}
 function initSwipe(el,onSwipe,nTabs){if(!el)return;var x0=null,y0=null,dx=0,lock=null,base=0;
   function drag(on){var n=navEl();if(n)n.classList.toggle('dragging',on);}
-  el.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=0;lock=null;base=navIndexOf(NAV.active);el.style.transition='none';},{passive:true});
+  el.addEventListener('touchstart',function(e){if(e.touches.length!==1)return;if(inNoSwipe(e.target)){x0=null;return;}x0=e.touches[0].clientX;y0=e.touches[0].clientY;dx=0;lock=null;base=navIndexOf(NAV.active);el.style.transition='none';},{passive:true});
   el.addEventListener('touchmove',function(e){if(x0==null)return;var t=e.touches[0];dx=t.clientX-x0;var dy=t.clientY-y0;
     if(lock===null&&(Math.abs(dx)>8||Math.abs(dy)>8)){lock=Math.abs(dx)>Math.abs(dy)*1.25?'x':'y';if(lock==='x')drag(true);}
     if(lock==='x'){if(e.cancelable)e.preventDefault();
