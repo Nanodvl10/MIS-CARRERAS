@@ -1,0 +1,13 @@
+services:
+  strava-sync:
+    build: .
+    container_name: miscarreras-sync
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      INTERVALO: 900          # 15 minutos
+      REPO_DIR: /repo
+      SALIDA: /repo/datos/entrenos.json
+    volumes:
+      - ./repo:/repo          # copia local del repositorio de la app
+      - ./estado:/app/estado  # guarda el refresh_token renovado

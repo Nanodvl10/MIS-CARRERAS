@@ -2,7 +2,7 @@
 "use strict";
 window.RACES = window.RACES || [];
 window.registerRace = function(r){ window.RACES.push(r); };
-var VERSION="2.5";
+var VERSION="2.7";
 var typeName={suave:"Suave",medio:"Rodaje",fuerte:"Fuerte",carga:"Carga",carrera:"Carrera"};
 var MODE={hold:["#ecb63f","CONTEN"],steady:["#6f8fae","RITMO"],hike:["#ff4a30","ANDAR"],send:["#4fa76e","SUELTA"]};
 var MESES=["ene","feb","mar","abr","may","jun","jul","ago","sept","oct","nov","dic"];
@@ -261,6 +261,12 @@ function share(title,text){if(navigator.share){navigator.share({title:title,text
 function renderAjustes(){clearTimer();var P=window.PROFILE||{};var chips=function(a,c){return (a||[]).map(function(x){return '<span class="chip'+(c?' '+c:'')+'">'+x+'</span>';}).join('');};var race=featuredRace();
   var html='<div class="view"><header class="home-head"><div class="kicker">Configuracion</div><h1>Mis <span class="devil">ajustes</span></h1><div class="meta">Version '+VERSION+'</div></header><div class="wrap content">'+
     '<div class="section-label">Mi perfil</div><div class="card"><div class="pf-row"><span>Peso objetivo</span><b>'+(P.peso||'-')+'</b></div>'+(P.comidas?'<div class="pf-blk"><div class="pf-h">HORARIOS</div>'+chips(P.comidas)+'</div>':'')+(P.noGusta?'<div class="pf-blk"><div class="pf-h">NO ME GUSTA</div>'+chips(P.noGusta,'no')+'</div>':'')+(P.reglas?'<div class="pf-blk"><div class="pf-h">REGLAS</div>'+chips(P.reglas)+'</div>':'')+'<p class="pf-note">Cada dieta nueva respeta esto. Se edita en profile.js.</p></div>'+
+    '<div class="section-label">Sincronizacion automatica</div><div class="card"><div class="sync-h"><span class="pf-h" style="margin:0">FEED DE ENTRENOS (STRAVA)</span><span class="sync-st" id="syncst"></span></div>'+
+    '<input class="sync-url" id="syncurl" type="url" inputmode="url" placeholder="https://usuario.github.io/REPO/datos/entrenos.json" value="'+esc(syncCfg().url||'')+'">'+
+    '<input class="sync-url" id="synckey" type="password" placeholder="Contrasena de cifrado" value="'+esc(syncCfg().key||'')+'" style="margin-top:8px">'+
+    '<div class="sync-row"><label class="lb-done"><input type="checkbox" id="syncoff"'+(syncCfg().off?'':' checked')+'><span>Auto al abrir</span></label><button class="btn sm" id="syncsave">Guardar</button><button class="btn primary sm" id="syncgo">Sincronizar</button></div>'+
+    (syncCfg().err?'<p class="sync-err">'+esc(syncCfg().err)+'</p>':'')+
+    '<p class="pf-note">Tu servidor consulta Strava, cifra los datos y los publica; la app los descifra en tu movil con esa contrasena. Nadie mas puede leerlos.</p></div>'+
     '<div class="section-label">Calendario y datos</div><div class="card">'+(race?'<button class="row-btn" id="ics">'+I.cal+'<span>Exportar plan al Calendario (.ics)</span>'+I.arrow+'</button>':'')+'<button class="row-btn" id="bk">'+I.down+'<span>Copia de seguridad (descargar)</span>'+I.arrow+'</button><label class="row-btn">'+I.up+'<span>Restaurar copia</span><input type="file" id="rs" accept="application/json,.json" hidden>'+I.arrow+'</label></div>'+
     '<div class="section-label">Reiniciar</div><div class="card"><button class="row-btn" data-reset="checks"><span>Checks del dia de carrera</span>'+I.arrow+'</button><button class="row-btn" data-reset="meals"><span>Casillas de comidas</span>'+I.arrow+'</button><button class="row-btn" data-reset="gear"><span>Lista de material</span>'+I.arrow+'</button><button class="row-btn danger" data-reset="log"><span>Registro de entrenos y peso</span>'+I.arrow+'</button></div>'+
     '<div class="section-label">Anadir carrera</div><div class="card"><p class="pf-note" style="margin:0">Pasale a Claude el GPX y la fecha. Te devuelve un archivo <b>races/nombre.js</b>: lo subes al repo, anades su nombre en <b>races/registry.js</b> y subes la version del service worker. Aparece sola aqui.</p></div>'+
@@ -268,6 +274,11 @@ function renderAjustes(){clearTimer();var P=window.PROFILE||{};var chips=functio
   app().innerHTML=html;window.scrollTo(0,0);mountHomeNav('ajustes');
   [].forEach.call(document.querySelectorAll('[data-reset]'),function(b){b.addEventListener('click',function(){var what=b.dataset.reset;var msg={checks:'Reiniciar los checks del dia de carrera?',meals:'Reiniciar las casillas de comidas?',gear:'Reiniciar la lista de material?',log:'Borrar TODO el registro de entrenos y peso? No se puede deshacer.'}[what];if(!confirm(msg))return;
     window.RACES.forEach(function(r){var K=KEYS(r.id);try{store&&store.removeItem({checks:K.checks,meals:K.meals,gear:K.gear,log:K.log}[what]);}catch(e){}});if(what==='log'){try{store&&store.removeItem('weight');}catch(e){}}toast('Hecho');});});
+  (function(){var c=syncCfg();var st=document.getElementById('syncst');
+    if(st)st.innerHTML=c.last?('ultima: '+new Date(c.last).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})):'sin usar';
+    function leer(){var cc=syncCfg();cc.url=document.getElementById('syncurl').value.trim();cc.key=document.getElementById('synckey').value;cc.off=!document.getElementById('syncoff').checked;return cc;}
+    var sv=document.getElementById('syncsave');if(sv)sv.addEventListener('click',function(){syncSaveCfg(leer());toast('Guardado');});
+    var go=document.getElementById('syncgo');if(go)go.addEventListener('click',function(){syncSaveCfg(leer());go.textContent='...';syncNow(false,function(){go.textContent='Sincronizar';renderAjustes();});});})();
   var ics=document.getElementById('ics');if(ics)ics.addEventListener('click',function(){downloadText('plan-'+race.id+'.ics',buildICS(race),'text/calendar');toast('Calendario generado. Abrelo y anade los eventos.');});
   document.getElementById('bk').addEventListener('click',function(){var data={v:VERSION,at:new Date().toISOString(),items:{}};if(store){for(var i=0;i<store.length;i++){var k=store.key(i);if(/^(log-|meals-|cdd-checks-|gear-|result-|race-|weight$)/.test(k))data.items[k]=store.getItem(k);}}downloadText('mis-carreras-backup.json',JSON.stringify(data,null,2),'application/json');});
   document.getElementById('rs').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){try{var d=JSON.parse(rd.result);Object.keys(d.items||{}).forEach(function(k){store&&store.setItem(k,d.items[k]);});toast('Copia restaurada');setTimeout(function(){location.hash='#/';},600);}catch(err){toast('Archivo no valido');}};rd.readAsText(f);});}
@@ -492,8 +503,76 @@ function renderImport(preIso){clearTimer();var race=featuredRace();if(race)prep(
       setTimeout(function(){location.hash='#/progreso';},700);});}
   if(preIso)toast('Elige el archivo del '+fmtShort(preIso));}
 
+
+/* ================= SINCRONIZACION AUTOMATICA ================= */
+/* Dos vias, ambas sin exponer secretos en la web:
+   1) URL de sincronizacion (#/sync?...) -> la llama un Atajo de iOS al acabar el entreno.
+   2) Feed JSON remoto -> lo genera tu servidor/homelab desde la API de Strava. */
+function syncCfg(){var c=getJ('synccfg');if(!c.url&&window.PROFILE&&window.PROFILE.syncUrl)c.url=window.PROFILE.syncUrl;return c;}
+function syncSaveCfg(c){setJ('synccfg',c);}
+function importedIds(){return getJ('syncids');}
+function markImported(id){var m=getJ('syncids');m[id]=Date.now();setJ('syncids',m);}
+function saveActivity(race,A,iso){
+  var K=KEYS(race.id);var L=getJ(K.log);var prev=L[iso]||{};
+  L[iso]={km:num(A.km),tiempo:fmtDur(A.sec),notas:prev.notas||'',hecho:true,
+    hrAvg:A.hrAvg||null,hrMax:A.hrMax||null,gain:(A.gain==null?null:A.gain),
+    splits:A.splits||[],route:A.route||[],src:A.src||'sync',name:A.name||''};
+  setJ(K.log,L);return true;}
+function dayExists(race,iso){return race.days.some(function(x){return !x.w&&x.iso===iso;});}
+/* --- via 1: Atajo de iOS --- */
+function handleSyncURL(qs){
+  var p={};qs.replace(/^\?/,'').split('&').forEach(function(kv){if(!kv)return;var i=kv.indexOf('=');var k=decodeURIComponent(kv.slice(0,i<0?kv.length:i));var v=i<0?'':decodeURIComponent(kv.slice(i+1).replace(/\+/g,' '));p[k]=v;});
+  var race=featuredRace();if(!race){location.hash='#/';return;}prep(race);
+  var km=parseFloat(String(p.km||'').replace(',','.'));
+  var sec=p.sec?parseInt(p.sec,10):parseTime(p.t||p.tiempo||'');
+  var iso=(p.date||p.fecha||todayISO()).slice(0,10);
+  if(!km||!sec){toast('Datos incompletos en el enlace');location.hash='#/';return;}
+  var id=p.id||('sc-'+iso+'-'+Math.round(km*100)+'-'+sec);
+  if(importedIds()[id]){toast('Ese entreno ya estaba');location.hash='#/progreso';return;}
+  var A={km:km,sec:sec,hrAvg:p.hr?parseInt(p.hr,10):null,hrMax:p.hrmax?parseInt(p.hrmax,10):null,
+    gain:p.d!=null&&p.d!==''?Math.round(parseFloat(p.d)):null,splits:[],route:[],src:'atajo',name:p.name||''};
+  if(!dayExists(race,iso))iso=todayISO();
+  saveActivity(race,A,iso);markImported(id);
+  toast('Entreno registrado: '+num(km)+' km &middot; '+fmtDur(sec));
+  location.hash='#/race/'+race.id+'/dias/'+iso;}
+/* --- via 2: feed remoto (cifrado) --- */
+function b64bytes(b64){var bin=atob(b64);var a=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return a;}
+function descifrar(sobre,clave){
+  if(!window.crypto||!crypto.subtle)return Promise.reject(new Error('Este navegador no puede descifrar (hace falta https)'));
+  var enc=new TextEncoder();
+  return crypto.subtle.importKey('raw',enc.encode(clave),{name:'PBKDF2'},false,['deriveKey'])
+    .then(function(base){return crypto.subtle.deriveKey({name:'PBKDF2',salt:b64bytes(sobre.salt),iterations:sobre.it||210000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);})
+    .then(function(k){return crypto.subtle.decrypt({name:'AES-GCM',iv:b64bytes(sobre.iv)},k,b64bytes(sobre.ct));})
+    .then(function(buf){return JSON.parse(new TextDecoder().decode(buf));})
+    .catch(function(){throw new Error('contrasena incorrecta o archivo corrupto');});}
+function syncNow(silent,cb){
+  var c=syncCfg();if(!c.url){if(!silent)toast('Configura antes la URL de sincronizacion');cb&&cb(0);return;}
+  var race=featuredRace();if(!race){cb&&cb(0);return;}prep(race);
+  fetch(c.url+(c.url.indexOf('?')<0?'?':'&')+'_='+Date.now(),{cache:'no-store'})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(doc){
+      if(doc&&doc.ct){if(!c.key)throw new Error('el archivo esta cifrado: pon tu contrasena en Ajustes');return descifrar(doc,c.key);}
+      return doc;})
+    .then(function(data){
+      var list=(data&&data.activities)||[];var n=0;
+      list.forEach(function(a){
+        var id=String(a.id||('feed-'+a.date+'-'+a.km));if(importedIds()[id])return;
+        var iso=String(a.date||'').slice(0,10);if(!iso)return;
+        if(!dayExists(race,iso))return;
+        saveActivity(race,{km:a.km,sec:a.sec,hrAvg:a.hrAvg,hrMax:a.hrMax,gain:a.gain,splits:a.splits||[],route:a.route||[],src:'strava',name:a.name},iso);
+        markImported(id);n++;});
+      c.last=Date.now();c.lastN=n;c.err='';syncSaveCfg(c);
+      if(n>0){toast(n+(n===1?' entreno nuevo importado':' entrenos nuevos importados'),'Ver',function(){location.hash='#/progreso';});}
+      else if(!silent)toast('Todo al dia, sin entrenos nuevos');
+      cb&&cb(n);})
+    .catch(function(e){var cc=syncCfg();cc.err=e.message;syncSaveCfg(cc);if(!silent)toast('No ha podido sincronizar: '+e.message);cb&&cb(-1);});}
+function autoSync(){var c=syncCfg();if(!c.url||c.off)return;
+  if(c.last&&Date.now()-c.last<10*60*1000)return;   /* como mucho cada 10 min */
+  syncNow(true);}
+
 /* ---------- ROUTER ---------- */
 function router(){var h=location.hash||'#/';var m;
+  if(h.indexOf('#/sync')===0){handleSyncURL(h.slice(6));return;}
   if((m=h.match(/^#\/race\/([^\/]+)(?:\/([a-z]+))?(?:\/(\d{4}-\d{2}-\d{2}))?(?:\/(log))?$/))){var f=window.RACES.filter(function(x){return x.id===m[1];})[0];if(f){renderRace(f,m[2]||'dias',m[3]||null,!!m[4]);return;}}
   if((m=h.match(/^#\/importar(?:\/(\d{4}-\d{2}-\d{2}))?$/))){renderImport(m[1]||null);return;}
   if(h==='#/progreso'||h==='#/entrenos'){renderProgreso();return;}if(h==='#/ajustes'){renderAjustes();return;}renderHome();}
@@ -501,8 +580,10 @@ document.addEventListener('click',function(e){var b=e.target.closest&&e.target.c
 window.addEventListener('hashchange',router);
 
 /* ---------- boot: load race files from registry ---------- */
-function boot(){if(window.RACES.length||!window.RACE_FILES||!window.RACE_FILES.length){router();return;}
-  var left=window.RACE_FILES.length;window.RACE_FILES.forEach(function(f){var s=document.createElement('script');s.src='races/'+f;s.onload=s.onerror=function(){if(--left===0)router();};document.head.appendChild(s);});}
+function boot(){function go(){router();setTimeout(autoSync,1200);}
+  if(window.RACES.length||!window.RACE_FILES||!window.RACE_FILES.length){go();return;}
+  var left=window.RACE_FILES.length;window.RACE_FILES.forEach(function(f){var s=document.createElement('script');s.src='races/'+f;s.onload=s.onerror=function(){if(--left===0)go();};document.head.appendChild(s);});}
+document.addEventListener('visibilitychange',function(){if(!document.hidden)autoSync();});
 window.addEventListener('DOMContentLoaded',boot);
 
 /* ---------- service worker + auto update ---------- */

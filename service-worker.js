@@ -1,4 +1,4 @@
-const CACHE = 'carreras-v9';
+const CACHE = 'carreras-v11';
 const ASSETS = [
   './','index.html','styles.css','app.js','profile.js',
   'races/registry.js','races/corral-del-diablo.js','manifest.json',

@@ -1,0 +1,7 @@
+.env
+.estado.json
+.cache.json
+repo/
+estado/
+sync.log
+__pycache__/
