@@ -1,7 +1,7 @@
 {
-  "name": "Mis carreras \u2014 Trail",
-  "short_name": "Carreras",
-  "description": "Dieta, ritmos y plan de carrera para cada trail",
+  "name": "CARRERAAP",
+  "short_name": "CARRERAAP",
+  "description": "Dieta, ritmos, mapa y plan de carrera para cada trail",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
