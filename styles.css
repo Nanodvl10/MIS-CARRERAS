@@ -688,3 +688,48 @@ html[data-theme="light"] .day-w{background:#f7f8fb}
 .content{padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 28px)}
 .readout{background:transparent;border:1px solid var(--line);border-left:3px solid var(--ember)}
 html[data-theme="light"] .readout{background:transparent}
+
+/* ================= v6.0 · graficas, nutricion, analisis ================= */
+.lchart{width:100%;height:auto;display:block;margin:8px 0 2px}
+.lc-x{fill:var(--dim2);font-size:13px}
+.lc-target{stroke:var(--gold);stroke-width:1.5;stroke-dasharray:5 5;opacity:.7}
+/* balance nutricional */
+.card.balance{background:linear-gradient(180deg,rgba(236,182,63,.08),var(--g800))}
+.bal-rings{display:flex;gap:10px;justify-content:space-around;margin:6px 0 4px}
+.bal-r{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1}
+.ring-wrap{position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center}
+.ring{position:absolute;inset:0}
+.ring-c{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.bal-t{text-align:center}
+.bal-t b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;display:block}
+.bal-t small{font-size:10.5px;color:var(--dim)}
+.hidr{margin-top:12px}
+.hidr .pf-h{margin-bottom:6px}
+.hidr-row{display:flex;align-items:center;gap:12px}
+.hidr-b{appearance:none;width:34px;height:34px;border-radius:10px;border:1px solid var(--line2);background:var(--g750);color:var(--mist);font-size:20px;font-weight:800;cursor:pointer;flex:none}
+.hidr-b:active{background:var(--ember);color:#160a05}
+.hidr-glasses{display:flex;gap:5px;flex:1;justify-content:center}
+.hidr-glasses i{width:14px;height:20px;border-radius:2px 2px 5px 5px;border:2px solid var(--line2);background:transparent;transition:.15s}
+.hidr-glasses i.on{background:#5aa9e6;border-color:#5aa9e6}
+/* animo */
+.mood{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
+.mood-h{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim2);width:100%;margin-bottom:2px}
+.mood-b{appearance:none;border:1px solid var(--line);background:var(--g900);border-radius:12px;padding:6px 10px;font-size:20px;cursor:pointer;filter:grayscale(.6);opacity:.7;transition:.15s;line-height:1}
+.mood-b.on{filter:none;opacity:1;border-color:var(--ember);background:rgba(255,90,44,.12);transform:scale(1.08)}
+html[data-theme="light"] .mood-b{background:#f7f8fb}
+/* analisis */
+.analisis{background:var(--g900);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:12px}
+.analisis .cc-h{color:var(--ember-soft);margin-bottom:6px}.analisis .cc-h svg{stroke:var(--ember-soft)}
+.analisis p{font-size:13px;color:#dbe1ea;line-height:1.5;margin:5px 0}
+html[data-theme="light"] .analisis{background:#f7f8fb}html[data-theme="light"] .analisis p{color:#2a3140}
+/* logros */
+.logros{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-top:4px}
+.logro{background:var(--g900);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.logro .lg-e{font-size:22px;line-height:1}
+.logro b{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
+.logro small{font-size:10px;color:var(--dim)}
+html[data-theme="light"] .logro,html[data-theme="light"] .ring-c~*{background:#f7f8fb}
+/* aviso de forma en la home */
+.suger{display:flex;gap:11px;align-items:flex-start;background:linear-gradient(180deg,rgba(236,182,63,.12),var(--g800));border:1px solid rgba(236,182,63,.4);border-radius:14px;padding:13px 14px;margin-bottom:8px;font-size:13px;line-height:1.45;color:#dbe1ea}
+.suger svg{width:20px;height:20px;flex:none;stroke:var(--gold);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-top:1px}
+.suger b{color:var(--mist)}

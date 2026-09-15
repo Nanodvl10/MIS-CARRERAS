@@ -2,7 +2,7 @@
 "use strict";
 window.RACES = window.RACES || [];
 window.registerRace = function(r){ window.RACES.push(r); };
-var VERSION="5.0";
+var VERSION="6.0";
 var typeName={suave:"Suave",medio:"Rodaje",fuerte:"Fuerte",carga:"Carga",carrera:"Carrera"};
 var MODE={hold:["#ecb63f","CONTEN"],steady:["#6f8fae","RITMO"],hike:["#ff4a30","ANDAR"],send:["#4fa76e","SUELTA"]};
 var MESES=["ene","feb","mar","abr","may","jun","jul","ago","sept","oct","nov","dic"];
@@ -232,11 +232,9 @@ function renderHome(){clearTimer();
         (today.isTraining?'<div class="td-w" id="td-w"></div>':'')+
         '<div class="td-actions"><button class="btn primary" data-go="#/race/'+featured.id+'/dias/'+today.iso+'">'+(today.menu&&today.menu.length?'Comidas de hoy ':'Ver el dia ')+I.arrow+'</button>'+(today.isTraining?'<button class="btn" data-go="#/race/'+featured.id+'/dias/'+today.iso+'/log">'+(log.hecho?'Ver entreno':'Registrar entreno')+'</button>':'')+'</div></div></div>';}
     else{html+='<div class="today"><div class="td-body"><div class="td-ent">Sin plan para hoy</div><div class="td-sub">'+(todayISO()<featured.planStart?'El plan de '+featured.name+' empieza el '+fmtShort(featured.planStart):'Dia libre')+'</div></div></div>';}
+    (function(){var Fx=forma();if(Fx&&(Fx.estado==='Cargado'||Fx.estado==='Riesgo')){html+='<div class="suger">'+I.fire+'<div><b>Vas '+Fx.estado.toLowerCase()+'.</b> '+Fx.texto+'</div></div>';}})();
     html+='<div class="section-label">'+(past?'Ultima carrera':'Proxima carrera')+'</div><a class="hero-card" href="#/race/'+featured.id+'"><div class="hc-media">'+heroProfile(featured.profile,'')+'<div class="hc-fade"></div><span class="hc-tag">'+(featured.kind||'Trail')+' &middot; '+featured.gain+'</span><span class="hc-cd'+(past?' past':'')+'">'+(past?(res?I.trophy+' '+esc(res.tiempo):'hecha'):'faltan '+cd(featured.date))+'</span><div class="hc-body"><div class="hc-name">'+featured.name+'</div><div class="hc-sub">'+featured.subtitle+' &middot; '+fmtDate(featured.date)+', '+featured.time+'</div></div></div><div class="hc-stats"><div class="s"><div class="sv ember">'+featured.km+'</div><div class="sl">km</div></div><div class="s"><div class="sv ember">'+featured.dplus+'</div><div class="sl">metros +</div></div><div class="s"><div class="sv">'+featured.estimate+'</div><div class="sl">objetivo</div></div></div></a>'+
-      '<div class="quick"><button class="qbtn" data-go="#/race/'+featured.id+'/mapa">'+I.mapa+'<span>Mapa</span></button><button class="qbtn" data-go="#/race/'+featured.id+'/carrera">'+I.carrera+'<span>Dia D</span></button><button class="qbtn" data-go="#/compra">'+I.cart+'<span>Compra</span></button><button class="qbtn" data-go="#/herramientas">'+I.ritmos+'<span>Calc</span></button></div>';
-    /* semana en curso */
-    (function(){var W=weekStats(featured);var hoy=todayISO();var cur=null;var wi=-1;featured.days.forEach(function(x){if(x.w){wi++;return;}if(x.iso===hoy)cur=W[wi];});
-      if(cur&&cur.plan){html+='<div class="wk-mini"><span>Esta semana</span><div class="wbar"><div style="width:'+Math.min(100,cur.done/cur.plan*100)+'%"></div></div><b>'+num(cur.done)+' / '+cur.plan+' km</b></div>';}})();}
+      '<div class="quick"><button class="qbtn" data-go="#/race/'+featured.id+'/mapa">'+I.mapa+'<span>Mapa</span></button><button class="qbtn" data-go="#/race/'+featured.id+'/carrera">'+I.carrera+'<span>Dia D</span></button><button class="qbtn" data-go="#/compra">'+I.cart+'<span>Compra</span></button><button class="qbtn" data-go="#/herramientas">'+I.ritmos+'<span>Calc</span></button></div>';}
   if(rest.length){html+='<div class="section-label">Otras carreras</div>';rest.forEach(function(r){var past=daysLeft(r.date)<0;var rs=resultOf(r.id);html+='<a class="minicard" href="#/race/'+r.id+'"><span class="mc-mini">'+miniProfile(r.profile)+'</span><span><span class="mc-n">'+r.name+'</span><span class="mc-d">'+fmtDate(r.date)+' &middot; '+r.dist+' &middot; '+r.gain+'</span></span><span class="mc-cd">'+(past?(rs?I.trophy+' '+esc(rs.tiempo):'hecha'):'faltan '+cd(r.date))+'</span></a>';});}
   if(!races.length)html+='<div class="card"><p class="lead" style="margin:0">Aun no hay carreras. Pasale a Claude un GPX y una fecha para anadir la primera.</p></div>';
   html+='</div></div>';app().innerHTML=html;window.scrollTo(0,0);mountHomeNav('inicio');
@@ -255,6 +253,8 @@ function renderProgreso(sub){clearTimer();var race=featuredRace();var Pf=P();sub
     html+=cardPrediccion(race)+cardForma();
     var now=new Date();var cm=getJ('calmes');var cy=cm.y!=null?cm.y:now.getFullYear(),cmo=cm.m!=null?cm.m:now.getMonth();
     html+='<div class="card cal-card"><div class="cc-h">'+I.dias+' <button class="cal-nav" data-cal="-1">&#8249;</button><span class="cal-t">'+MESES[cmo]+' '+cy+'</span><button class="cal-nav" data-cal="1">&#8250;</button></div>'+calMes(race,cy,cmo)+'<div class="cal-leg"><span><i class="l-plan"></i>previsto</span><span><i class="l-hecho"></i>hecho</span><span><i class="l-carrera"></i>carrera</span></div></div>';
+    html+='<button class="btn wide-btn" data-go="#/evolucion">'+I.chart+' Graficas de evolucion</button>';
+    var LG=logros();if(LG.length)html+='<div class="card soft"><div class="cc-h">'+I.trophy+' Logros</div><div class="logros">'+LG.map(function(a){return '<div class="logro"><span class="lg-e">'+a[0]+'</span><b>'+a[1]+'</b><small>'+a[2]+'</small></div>';}).join('')+'</div></div>';
   }
   if(sub==='entrenos'){
     html+='<div class="card chart-card"><div class="cc-h">'+I.chart+' Km por semana <span>hecho / plan</span></div>'+weekChart(weeks)+'</div>';
@@ -281,12 +281,31 @@ function renderProgreso(sub){clearTimer();var race=featuredRace();var Pf=P();sub
   [].forEach.call(document.querySelectorAll('[data-sess]'),function(b){b.addEventListener('click',function(){detalleSesion(race,b.dataset.sess);});});
   var ws=document.getElementById('wt-save');if(ws)ws.addEventListener('click',function(){var v=parseFloat(document.getElementById('wt-in').value.replace(',','.'));if(!v)return;var W=getJ('weight');W[todayISO()]=v;setJ('weight',W);toast('Peso guardado');renderProgreso('cuerpo');});
   document.getElementById('share-prog').addEventListener('click',function(){var txt='Progreso '+race.name+': '+num(td)+'/'+tp+' km ('+(tp?Math.round(td/tp*100):0)+'%), dieta '+ad.pct+'%, racha '+sk+' dias.';share('Mi progreso',txt);});}
+function analisisSesion(race,x,l){
+  var km=parseFloat(String(l.km||'').replace(',','.'))||0,sec=parseTime(l.tiempo);if(!km||!sec)return '';
+  var msgs=[];var tz=tiempoEnZonas(l);
+  if(tz){var top=0,ti=0;tz.pct.forEach(function(pp,i){if(pp>top){top=pp;ti=i;}});var Z=zonasFC();
+    if(Z)msgs.push('Mayormente en <b style="color:'+Z[ti].c+'">Z'+(ti+1)+' '+Z[ti].n+'</b> ('+top+'%).');
+    var alto=(tz.pct[3]||0)+(tz.pct[4]||0);
+    if((x.type==='suave'||/facil|suave|rodaje/i.test(x.ent))&&alto>=30)msgs.push('Era un dia suave y has ido '+alto+'% en Z4-Z5: baja el ritmo en los rodajes de recuperacion.');
+    if((x.type==='fuerte'||/tempo|serie|ritmo|cuesta/i.test(x.ent))&&alto<20)msgs.push('Para ser calidad has ido suave; la proxima aprieta mas en los tramos fuertes.');}
+  var M=marcasBase(60);
+  if(M.length>=2){var avg=M.reduce(function(a,m){return a+planoEquivalente(m.km,m.sec,m.gain,m.gain>150)/m.km;},0)/M.length;
+    var flat=planoEquivalente(km,sec,l.gain||0,(l.gain||0)>150)/km;var dif=Math.round(flat-avg);
+    if(dif<=-8)msgs.push('Ritmo (ajustado por desnivel) <b>'+Math.abs(dif)+'s/km mas rapido</b> que tu media reciente. Buen dia.');
+    else if(dif>=10)msgs.push('Hoy '+dif+'s/km mas lento que tu media (ajustado por desnivel). Normal si tocaba suave o venias cargado.');}
+  if(l.hrAvg&&km>=8&&l.splits&&l.splits.length>=6){var mit=Math.floor(l.splits.length/2),h1=0,n1=0,h2=0,n2=0;
+    l.splits.forEach(function(sp,i){if(!sp.hr)return;if(i<mit){h1+=sp.hr;n1++;}else{h2+=sp.hr;n2++;}});
+    if(n1&&n2){var dd=Math.round(h2/n2-h1/n1);if(dd>=8)msgs.push('Deriva cardiaca: +'+dd+' ppm en la 2a mitad. Signo de fatiga o calor; cuida la hidratacion.');}}
+  if(!msgs.length)return '';
+  return '<div class="analisis"><div class="cc-h">'+I.ritmos+' Analisis</div>'+msgs.map(function(m){return '<p>'+m+'</p>';}).join('')+'</div>';}
+
 function detalleSesion(race,iso){var x=race.days.filter(function(d){return d.iso===iso;})[0];if(!x)return;var l=getJ(KEYS(race.id).log)[iso]||{};var tz=tiempoEnZonas(l);
   if(!l.hecho&&!x.race){location.hash='#/race/'+race.id+'/dias/'+iso+'/log';return;}
   if(x.race){location.hash='#/race/'+race.id+'/carrera';return;}
   var km=parseFloat(String(l.km||'').replace(',','.'))||0,sec=parseTime(l.tiempo);
   var cuerpo='<div class="imp-grid"><div><span class="ok2">distancia</span><b>'+num(km)+'<small> km</small></b></div><div><span class="ok2">tiempo</span><b>'+(l.tiempo||'-')+'</b></div>'+(km&&sec?'<div><span class="ok2">ritmo</span><b>'+fmtPace(sec,km).replace(' /km','')+'<small> /km</small></b></div>':'')+(l.gain!=null&&l.gain!==''?'<div><span class="ok2">desnivel +</span><b>'+l.gain+'<small> m</small></b></div>':'')+(l.hrAvg?'<div><span class="ok2">FC media</span><b class="hr">'+l.hrAvg+'</b></div>':'')+(l.hrMax?'<div><span class="ok2">FC max</span><b class="hr">'+l.hrMax+'</b></div>':'')+'</div>'+
-    (tz?'<div class="cc-h" style="margin-top:8px">Tiempo en zonas</div>'+barraZonas(tz):'')+(l.route&&l.route.length?routeMini(l.route):'')+(l.splits&&l.splits.length?'<div class="cc-h" style="margin-top:10px">Parciales</div>'+splitsChart(l.splits):'')+(l.notas?'<p class="pf-note" style="margin-top:10px">&ldquo;'+esc(l.notas)+'&rdquo;</p>':'')+
+    (tz?'<div class="cc-h" style="margin-top:8px">Tiempo en zonas</div>'+barraZonas(tz):'')+(l.route&&l.route.length?routeMini(l.route):'')+(l.splits&&l.splits.length?'<div class="cc-h" style="margin-top:10px">Parciales</div>'+splitsChart(l.splits):'')+analisisSesion(race,x,l)+(l.notas?'<p class="pf-note" style="margin-top:10px">&ldquo;'+esc(l.notas)+'&rdquo;</p>':'')+
     '<button class="btn wide-btn" data-go="#/race/'+race.id+'/dias/'+iso+'/log" style="margin-top:12px">Editar este entreno</button>';
   abrirHoja(esc(x.ent),fmtDate(iso)+(l.src==='import'?' &middot; importado':l.src==='strava'?' &middot; Strava':''),cuerpo);}
 function share(title,text){if(navigator.share){navigator.share({title:title,text:text}).catch(function(){});}else if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){toast('Copiado al portapapeles');});}else{toast(text);}}
@@ -364,13 +383,15 @@ function renderRace(race,tab,focusIso,openLog){clearTimer();prep(race);tab=tab||
     if(!x.menu||!x.menu.length)rows='<p class="pf-note" style="margin:6px 0 4px">Este dia no tiene plan de comidas. '+(race.custom?'Las dietas se generan con Claude a partir de tu perfil y tu calendario.':'')+'</p>';
     var mac=x.mac?x.mac.split(' \u00b7 ').map(function(pp){return '<span><b>'+pp+'</b></span>';}).join(''):'';
     var logHtml=(!x.isTraining)?'<div class="logbox lite"><div class="lb-h">'+I.dias+' Notas del dia</div><div class="lb-grid"><label class="wide"><input type="text" data-f="notas" value="'+esc(lg.notas||'')+'" placeholder="Sensaciones, sueno, molestias..."></label></div><div class="lb-foot"><span class="lb-pace"></span><button class="btn primary sm" data-save="1">Guardar</button></div></div>':'<div class="logbox"><div class="lb-h">'+I.log+' Mi entreno &middot; previsto '+x.planKm+' km</div><div class="lb-grid"><label>Km<input type="text" inputmode="decimal" data-f="km" value="'+esc(lg.km||'')+'" placeholder="'+x.planKm+'"></label><label>Tiempo<input type="text" data-f="tiempo" value="'+esc(lg.tiempo||'')+'" placeholder="mm:ss"></label><label class="wide">Notas<input type="text" data-f="notas" value="'+esc(lg.notas||'')+'" placeholder="Sensaciones, terreno..."></label></div><div class="lb-foot"><span class="lb-pace">'+(lg.km&&lg.tiempo?fmtPace(parseTime(lg.tiempo),parseFloat(String(lg.km).replace(',','.'))):'')+'</span><label class="lb-done"><input type="checkbox" data-f="hecho"'+(lg.hecho?' checked':'')+'><span>Hecho</span></label><button class="btn primary sm" data-save="1">Guardar</button></div>'+
-      '<button class="btn sm imp-btn" data-go="#/importar/'+x.iso+'">'+I.up+' Importar archivo del reloj</button>'+
+      '<div class="mood" data-mood-cur="'+(lg.mood||'')+'"><span class="mood-h">Como te has sentido</span>'+['\ud83d\ude04','\ud83d\ude42','\ud83d\ude10','\ud83d\ude2b','\ud83e\udd15'].map(function(e){return '<button type="button" class="mood-b'+(lg.mood===e?' on':'')+'" data-mood="'+e+'">'+e+'</button>';}).join('')+'</div>'+'<button class="btn sm imp-btn" data-go="#/importar/'+x.iso+'">'+I.up+' Importar archivo del reloj</button>'+
       (lg.src==='import'?'<div class="imp-mini">'+(lg.hrAvg?'<span class="hr">'+lg.hrAvg+' ppm medias</span>':'')+(lg.hrMax?'<span class="hr">max '+lg.hrMax+'</span>':'')+(lg.gain!=null?'<span>+'+lg.gain+' m</span>':'')+'</div>'+(lg.route&&lg.route.length?routeMini(lg.route):'')+(lg.splits&&lg.splits.length?splitsChart(lg.splits):''):'')+'</div>';
     var editBtn='<div class="day-tools"><button class="btn sm" data-edit="1">'+I.dias+' '+(x.isTraining?'Editar sesion':'Anadir sesion')+'</button>'+(daysLeft(x.iso)>=0&&daysLeft(x.iso)<=15?'<button class="btn sm" data-meteo="1">'+I.sun+' Tiempo</button>':'')+'</div><div class="day-meteo" id="dm-'+x.iso+'"></div>';
-    el.innerHTML=head+'<div class="body"><div class="body-in">'+(mac?'<div class="macrobar">'+mac+'</div>':'')+rows+logHtml+editBtn+'</div></div>';
+    el.innerHTML=head+'<div class="body"><div class="body-in">'+(mac?'<div class="macrobar">'+mac+'</div>':'')+rows+'<div id="bal-'+x.iso+'">'+cardBalance(race,x)+'</div>'+logHtml+editBtn+'</div></div>';
     var b=el.querySelector('button'),body=el.querySelector('.body');function setOpen(o){el.dataset.open=o?"1":"0";b.setAttribute('aria-expanded',String(o));body.style.maxHeight=o?body.scrollHeight+"px":null;}b.addEventListener('click',function(){setOpen(el.dataset.open!=="1");});el._setOpen=setOpen;
-    [].forEach.call(el.querySelectorAll('input[data-mi]'),function(inp){inp.addEventListener('change',function(){var m=getJ(K.meals);m[x.iso]=m[x.iso]||{};m[x.iso][inp.dataset.mi]=inp.checked;setJ(K.meals,m);el.querySelector('.kc').innerHTML=kcTxt();});});
+    [].forEach.call(el.querySelectorAll('input[data-mi]'),function(inp){inp.addEventListener('change',function(){var m=getJ(K.meals);m[x.iso]=m[x.iso]||{};m[x.iso][inp.dataset.mi]=inp.checked;setJ(K.meals,m);el.querySelector('.kc').innerHTML=kcTxt();var bx=el.querySelector('#bal-'+x.iso);if(bx){bx.innerHTML=cardBalance(race,x);wireBalance(el,race,x,body);}body.style.maxHeight=body.scrollHeight+'px';});});
+    wireBalance(el,race,x,body);
     var eb=el.querySelector('[data-edit]');if(eb)eb.addEventListener('click',function(ev){ev.preventDefault();editarSesion(race,x,function(){renderRace(race,'dias',x.iso,false);});});
+    var mrow=el.querySelector('.mood');if(mrow)[].forEach.call(mrow.querySelectorAll('[data-mood]'),function(mb){mb.addEventListener('click',function(){mrow.dataset.moodCur=mb.dataset.mood;[].forEach.call(mrow.querySelectorAll('.mood-b'),function(o){o.classList.toggle('on',o===mb);});});});
     var mb=el.querySelector('[data-meteo]');if(mb)mb.addEventListener('click',function(ev){ev.preventDefault();var out=document.getElementById('dm-'+x.iso);var co=coordsEntreno(race);if(!co){out.innerHTML='<p class="pf-note">Guarda tu ubicacion en el perfil para ver el tiempo.</p>';body.style.maxHeight=body.scrollHeight+'px';return;}
       out.innerHTML='<p class="pf-note">Consultando...</p>';body.style.maxHeight=body.scrollHeight+'px';var hora=x.race?race.time:(P().horaEntreno||'18:00');
       tiempoDia(x.iso,hora,co,function(d){out.innerHTML=d?'<div class="day-w">'+chipTiempo(d)+'<small>a las '+hora+(co.src==='carrera'?' en la salida de la carrera':'')+'</small></div>':'<p class="pf-note">Sin prevision disponible.</p>';body.style.maxHeight=body.scrollHeight+'px';});});
@@ -379,7 +400,7 @@ function renderRace(race,tab,focusIso,openLog){clearTimer();prep(race);tab=tab||
     var sv=el.querySelector('[data-save]');if(sv){var box=el.querySelector('.logbox');function recalc(){var ki=box.querySelector('[data-f=km]'),ti=box.querySelector('[data-f=tiempo]');if(!ki||!ti)return;var km=parseFloat(ki.value.replace(',','.')),t=parseTime(ti.value);box.querySelector('.lb-pace').textContent=(km&&t)?fmtPace(t,km):'';body.style.maxHeight=body.scrollHeight+'px';}
       [].forEach.call(box.querySelectorAll('input[data-f=km],input[data-f=tiempo]'),function(i){i.addEventListener('input',recalc);});
       sv.addEventListener('click',function(){var Lg=getJ(K.log);var prev=Lg[x.iso]||{};var gv=function(f){var e=box.querySelector('[data-f='+f+']');return e?e.value:(prev[f]||'');};var hc=box.querySelector('[data-f=hecho]');
-        Lg[x.iso]={km:gv('km'),tiempo:gv('tiempo'),notas:gv('notas'),hecho:hc?hc.checked:!!prev.hecho,hrAvg:prev.hrAvg||null,hrMax:prev.hrMax||null,gain:prev.gain!=null?prev.gain:null,splits:prev.splits||[],route:prev.route||[],src:prev.src||'',name:prev.name||''};setJ(K.log,Lg);sv.textContent='Guardado';sv.classList.add('saved');setTimeout(function(){sv.textContent='Guardar';sv.classList.remove('saved');},1200);el.querySelector('.kc').innerHTML=kcTxt();toast(x.isTraining?'Entreno guardado':'Notas guardadas');});}
+        var mr=box.querySelector('.mood');Lg[x.iso]={km:gv('km'),tiempo:gv('tiempo'),notas:gv('notas'),hecho:hc?hc.checked:!!prev.hecho,mood:(mr?mr.dataset.moodCur:prev.mood)||'',hrAvg:prev.hrAvg||null,hrMax:prev.hrMax||null,gain:prev.gain!=null?prev.gain:null,splits:prev.splits||[],route:prev.route||[],src:prev.src||'',name:prev.name||''};setJ(K.log,Lg);sv.textContent='Guardado';sv.classList.add('saved');setTimeout(function(){sv.textContent='Guardar';sv.classList.remove('saved');},1200);el.querySelector('.kc').innerHTML=kcTxt();toast(x.isTraining?'Entreno guardado':'Notas guardadas');});}
     dlEl.appendChild(el);if(focusIso&&x.iso===focusIso)focusEl=el;});
 
   /* ritmos */
@@ -778,6 +799,74 @@ function renderImport(preIso){clearTimer();var race=featuredRace();if(race)prep(
 
 
 
+
+/* ================= GRAFICAS DE EVOLUCION ================= */
+function lineChart(pts,opt){opt=opt||{};if(!pts.length)return '<p class="pf-note">Sin datos aun.</p>';
+  var W=600,H=opt.h||150,pad=opt.pad||{t:12,r:10,b:20,l:10};
+  var ys=pts.map(function(p){return p.y;});var mn=opt.min!=null?opt.min:Math.min.apply(null,ys),mx=opt.max!=null?opt.max:Math.max.apply(null,ys);
+  if(mx===mn){mx=mn+1;mn=mn-1;}var rg=mx-mn;
+  var iw=W-pad.l-pad.r,ih=H-pad.t-pad.b;
+  var X=function(i){return pad.l+(pts.length<2?iw/2:i/(pts.length-1)*iw);};
+  var Y=function(v){return pad.t+ih-(v-mn)/rg*ih;};
+  var d=pts.map(function(p,i){return (i?'L':'M')+X(i).toFixed(1)+' '+Y(p.y).toFixed(1);}).join(' ');
+  var area='M'+X(0).toFixed(1)+' '+(pad.t+ih)+' '+pts.map(function(p,i){return 'L'+X(i).toFixed(1)+' '+Y(p.y).toFixed(1);}).join(' ')+'L'+X(pts.length-1).toFixed(1)+' '+(pad.t+ih)+'Z';
+  var col=opt.color||'#ff5a2c';var id='g'+Math.random().toString(36).slice(2,7);
+  var dots=pts.map(function(p,i){return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.y).toFixed(1)+'" r="3.5" fill="'+col+'"/>';}).join('');
+  var labs=pts.map(function(p,i){return (i%Math.ceil(pts.length/6||1)===0||i===pts.length-1)?'<text x="'+X(i).toFixed(1)+'" y="'+(H-6)+'" text-anchor="middle" class="lc-x">'+p.x+'</text>':'';}).join('');
+  var tline=opt.target!=null&&opt.target>=mn&&opt.target<=mx?'<line x1="'+pad.l+'" y1="'+Y(opt.target).toFixed(1)+'" x2="'+(W-pad.r)+'" y2="'+Y(opt.target).toFixed(1)+'" class="lc-target"/>':'';
+  return '<svg class="lchart" viewBox="0 0 '+W+' '+H+'"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+col+'" stop-opacity=".28"/><stop offset="1" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>'+
+    tline+'<path d="'+area+'" fill="url(#'+id+')"/><path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'+dots+labs+'</svg>';}
+function serieSemanal(){ /* km hechos y ritmo medio por semana ISO, ultimas 8 con datos */
+  var byWeek={};window.RACES.forEach(function(r){prep(r);var L=getJ(KEYS(r.id).log);Object.keys(L).forEach(function(iso){var l=L[iso];if(!l.hecho)return;var km=parseFloat(String(l.km||'').replace(',','.'))||0;if(!km)return;
+    var d=new Date(iso+'T00:00:00');var on=(d.getDay()+6)%7;var lun=addDays(iso,-on);var o=byWeek[lun]||{km:0,sec:0,skm:0};o.km+=km;var sec=parseTime(l.tiempo);if(sec){o.sec+=sec;o.skm+=km;}byWeek[lun]=o;});});
+  return Object.keys(byWeek).sort().slice(-8).map(function(k){var o=byWeek[k];return {iso:k,km:o.km,pace:o.skm?o.sec/o.skm:null};});}
+function serie(clave){ /* peso o fc reposo: [{iso,v}] */
+  var raw=getJ(clave);return Object.keys(raw).sort().map(function(iso){return {iso:iso,v:parseFloat(raw[iso])};}).filter(function(p){return !isNaN(p.v);});}
+function renderEvolucion(){clearTimer();var Pf=P();
+  var sem=serieSemanal();var peso=serie('weight');var fcr=serie('fcreposo');
+  var kmPts=sem.map(function(w){return {x:fmtShort(w.iso).replace(/ .*/,''),y:Math.round(w.km)};});
+  var pacePts=sem.filter(function(w){return w.pace;}).map(function(w){return {x:fmtShort(w.iso).replace(/ .*/,''),y:Math.round(w.pace)};});
+  var target=parseFloat(String(Pf.peso||'').replace(',','.'))||null;
+  var html='<div class="view"><button class="backfab static" data-go="#/progreso">'+I.back+'</button><header class="home-head"><div class="kicker">Progreso</div><h1>Mi <span class="devil">evolucion</span></h1></header><div class="wrap content">'+
+    '<div class="card"><div class="cc-h">'+I.chart+' Volumen semanal <span>km hechos</span></div>'+lineChart(kmPts,{color:'#ff5a2c',min:0})+'</div>'+
+    '<div class="card"><div class="cc-h">'+I.ritmos+' Ritmo medio <span>min/km por semana</span></div>'+(pacePts.length?lineChart(pacePts,{color:'#4fa76e'})+'<p class="pf-note">Mas abajo = mas rapido. '+(pacePts.length>1?'De '+fmtDur(pacePts[0].y)+' a '+fmtDur(pacePts[pacePts.length-1].y)+' /km.':'')+'</p>':'<p class="pf-note">Registra entrenos con tiempo para ver tu ritmo.</p>')+'</div>'+
+    '<div class="card"><div class="cc-h">'+I.scale+' Peso <span>'+(target?'objetivo '+num(target):'kg')+'</span></div>'+(peso.length?lineChart(peso.map(function(p){return {x:fmtShort(p.iso).replace(/ .*/,''),y:p.v};}),{color:'#ecb63f',target:target})+'<p class="pf-note">'+(peso.length>1?(peso[peso.length-1].v-peso[0].v>0?'+':'')+num(peso[peso.length-1].v-peso[0].v)+' kg desde el inicio.':'Ve apuntando en Cuerpo para ver la tendencia.')+'</p>':'<p class="pf-note">Apunta tu peso en Progreso &rarr; Cuerpo.</p>')+'</div>'+
+    '<div class="card"><div class="cc-h">'+I.fire+' FC en reposo <span>ppm al despertar</span></div><div class="wt-row"><input type="text" inputmode="numeric" id="fcr-in" placeholder="'+(fcr.length?fcr[fcr.length-1].v:'48')+'"><span class="wt-u">ppm hoy</span><button class="btn primary sm" id="fcr-save">Guardar</button></div>'+(fcr.length?lineChart(fcr.map(function(p){return {x:fmtShort(p.iso).replace(/ .*/,''),y:p.v};}),{color:'#6f8fae'})+'<p class="pf-note">Si sube varios dias seguidos, tu cuerpo pide descanso.</p>':'<p class="pf-note">Tomatelas nada mas despertar, tumbado. Es el mejor aviso de fatiga.</p>')+'</div>'+
+    '</div></div>';
+  app().innerHTML=html;window.scrollTo(0,0);mountHomeNav('progreso');
+  var b=document.getElementById('fcr-save');if(b)b.addEventListener('click',function(){var v=parseInt(document.getElementById('fcr-in').value,10);if(!v)return;var F=getJ('fcreposo');F[todayISO()]=v;setJ('fcreposo',F);toast('FC en reposo guardada');renderEvolucion();});}
+
+function logros(){var kmTot=0,nHr=0,masL=0,res=0,sk=0;
+  window.RACES.forEach(function(r){prep(r);var L=getJ(KEYS(r.id).log);Object.keys(L).forEach(function(iso){var l=L[iso];if(!l.hecho)return;var km=parseFloat(String(l.km||'').replace(',','.'))||0;kmTot+=km;if(l.hrAvg)nHr++;if(km>masL)masL=km;});var v=streak(r);if(v>sk)sk=v;if(resultOf(r.id))res++;});
+  var out=[];if(kmTot>0)out.push(['\ud83d\udc5f',Math.round(kmTot)+' km','acumulados']);if(sk>=2)out.push(['\ud83d\udd25',sk+' dias','de racha']);if(masL)out.push(['\ud83c\udfc3',num(masL)+' km','tu mas largo']);if(nHr)out.push(['\u2764\ufe0f',nHr,'con pulsometro']);if(res)out.push(['\ud83c\udfc6',res,res===1?'carrera hecha':'carreras hechas']);return out;}
+
+/* ================= BALANCE NUTRICIONAL DEL DIA ================= */
+function objetivoDia(race,dia){ /* kcal e HC objetivo del dia, del mac del plan */
+  if(dia&&dia.mac){var kc=parseInt(String(dia.mac).replace(/[.\s]/g,'').match(/(\d+)kcal/i)?RegExp.$1:'0',10);var hc=(String(dia.mac).match(/HC\s*(\d+)/i)||[])[1];return {kcal:kc||null,hc:hc?parseInt(hc,10):null};}
+  return {kcal:null,hc:null};}
+function gastoEntreno(l,peso){if(!l||!l.hecho)return 0;var km=parseFloat(String(l.km||'').replace(',','.'))||0;if(!km)return 0;var p=peso||60;var sub=(l.gain||0)*p*0.0018;return Math.round(km*p*0.95+sub);}
+function balanceDia(race,dia){
+  var meals=getJ(KEYS(race.id).meals)[dia.iso]||{};var n=dia.menu?dia.menu.length:0;var hechas=Object.keys(meals).filter(function(k){return meals[k];}).length;
+  var obj=objetivoDia(race,dia);var frac=n?hechas/n:0;
+  var consumidoKcal=obj.kcal?Math.round(obj.kcal*frac):null;var consumidoHC=obj.hc?Math.round(obj.hc*frac):null;
+  var l=getJ(KEYS(race.id).log)[dia.iso];var gasto=gastoEntreno(l,pesoNum());
+  return {obj:obj,hechas:hechas,n:n,frac:frac,consumidoKcal:consumidoKcal,consumidoHC:consumidoHC,gasto:gasto};}
+function anillo(pct,color,size){size=size||64;var r=(size-8)/2,c=2*Math.PI*r,off=c*(1-Math.max(0,Math.min(1,pct)));
+  return '<svg class="ring" width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="var(--g750)" stroke-width="6"/><circle cx="'+size/2+'" cy="'+size/2+'" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="6" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 '+size/2+' '+size/2+')"/></svg>';}
+function cardBalance(race,dia){var B=balanceDia(race,dia);if(!B.obj.kcal&&!B.n)return '';
+  var hidr=getJ('hidr')[dia.iso]||0;
+  return '<div class="card balance"><div class="cc-h">'+I.food+' Balance del dia <span>'+B.hechas+'/'+B.n+' comidas</span></div>'+
+    '<div class="bal-rings">'+
+    (B.obj.kcal?'<div class="bal-r"><div class="ring-wrap">'+anillo(B.frac,'#ecb63f')+'<span class="ring-c">'+Math.round(B.frac*100)+'%</span></div><div class="bal-t"><b>'+(B.consumidoKcal||0)+'</b><small>/ '+B.obj.kcal+' kcal</small></div></div>':'')+
+    (B.obj.hc?'<div class="bal-r"><div class="ring-wrap">'+anillo(B.frac,'#ff5a2c')+'<span class="ring-c">'+(B.consumidoHC||0)+'</span></div><div class="bal-t"><b>'+(B.consumidoHC||0)+' g</b><small>/ '+B.obj.hc+' g HC</small></div></div>':'')+
+    (B.gasto?'<div class="bal-r"><div class="ring-wrap">'+anillo(1,'#4fa76e')+'<span class="ring-c">'+I.fire+'</span></div><div class="bal-t"><b>+'+B.gasto+'</b><small>kcal gastadas</small></div></div>':'')+
+    '</div>'+
+    (B.obj.kcal&&B.gasto?'<p class="pf-note">Balance neto estimado: <b>'+((B.consumidoKcal||0)-B.gasto)+' kcal</b> (comido '+(B.consumidoKcal||0)+' &minus; gastado '+B.gasto+'). El plan ya cuenta con el entreno.</p>':'')+
+    '<div class="hidr"><span class="pf-h">HIDRATACION</span><div class="hidr-row"><button class="hidr-b" data-h="-1">&minus;</button><div class="hidr-glasses">'+Array.from({length:8},function(_,i){return '<i class="'+(i<hidr?'on':'')+'"></i>';}).join('')+'</div><button class="hidr-b" data-h="1">+</button></div><small class="pf-note">'+hidr+' / 8 vasos (~'+(hidr*250)+' ml)</small></div>'+
+    '</div>';}
+
+function wireBalance(el,race,x,body){var bx=el.querySelector('#bal-'+x.iso);if(!bx)return;[].forEach.call(bx.querySelectorAll('[data-h]'),function(b){b.addEventListener('click',function(ev){ev.preventDefault();var H=getJ('hidr');var v=(H[x.iso]||0)+parseInt(b.dataset.h,10);v=Math.max(0,Math.min(8,v));H[x.iso]=v;setJ('hidr',H);bx.innerHTML=cardBalance(race,x);wireBalance(el,race,x,body);if(body)body.style.maxHeight=body.scrollHeight+'px';});});}
+
 /* ================= HERRAMIENTAS DEL CORREDOR ================= */
 function riegel(t1,d1,d2){return t1*Math.pow(d2/d1,1.06);}
 function mejoresMarcas(){var out=[];window.RACES.forEach(function(r){prep(r);var L=getJ(KEYS(r.id).log);Object.keys(L).forEach(function(iso){var l=L[iso];var km=parseFloat(String(l.km||'').replace(',','.'));var sec=parseTime(l.tiempo);if(km>0&&sec>0&&l.hecho)out.push({km:km,sec:sec,iso:iso,pace:sec/km,name:l.name||'',race:r.name,hr:l.hrAvg||null});});
@@ -1035,6 +1124,7 @@ function router(){var h=location.hash||'#/';var m;
   if(h==='#/perfil'){renderPerfil();return;}
   if(h==='#/nueva'){renderNuevaCarrera();return;}
   if(h==='#/herramientas'){renderHerramientas();return;}
+  if(h==='#/evolucion'){renderEvolucion();return;}
   if(h==='#/acerca'){renderAcerca();return;}
   if((m=h.match(/^#\/race\/([^\/]+)(?:\/([a-z]+))?(?:\/(\d{4}-\d{2}-\d{2}))?(?:\/(log))?$/))){var f=window.RACES.filter(function(x){return x.id===m[1];})[0];if(f){renderRace(f,m[2]||'dias',m[3]||null,!!m[4]);return;}}
   if((m=h.match(/^#\/importar(?:\/(\d{4}-\d{2}-\d{2}))?$/))){renderImport(m[1]||null);return;}
