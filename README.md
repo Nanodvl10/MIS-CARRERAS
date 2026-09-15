@@ -1,4 +1,4 @@
-# CARRERAAP · v4.1
+# CARRERAAP · v5.0
 
 App personal para corredores de trail y asfalto. Se instala en el móvil como
 una app (PWA), funciona sin conexión, se actualiza sola y **todos los datos se
